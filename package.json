@@ -1,0 +1,47 @@
+{
+  "name": "@ambienceai/mcp-server",
+  "version": "1.0.0",
+  "description": "Ambience AI MCP Server - Generate images, videos, and audio through Model Context Protocol",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "ambienceai-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "test": "node test-server.js",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "ambience-ai",
+    "image-generation",
+    "video-generation",
+    "audio-generation"
+  ],
+  "author": "Ambience AI",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.4",
+    "axios": "^1.11.0",
+    "dotenv": "^17.2.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "tsx": "^4.20.4",
+    "typescript": "^5.9.2"
+  }
+}

@@ -1,0 +1,113 @@
+import { z } from 'zod';
+
+// API Response types
+export interface ApiResponse<T = unknown> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
+// Credits API response
+export const CreditsResponseSchema = z.object({
+  credits: z.number()
+});
+
+export type CreditsResponse = z.infer<typeof CreditsResponseSchema>;
+
+// Creation types
+export const CreationSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  prompt: z.string(),
+  status: z.enum(['pending', 'processing', 'completed', 'failed']),
+  type: z.enum(['image', 'video', 'speech', 'music']),
+  created_at: z.string(),
+  completed_at: z.string().optional(),
+  url: z.string().optional(),
+  error: z.string().optional(),
+  metadata: z.record(z.any()).optional(),
+  generationType: z.string().optional()
+});
+
+export type Creation = z.infer<typeof CreationSchema>;
+
+// Generation request schemas
+export const GenerateImageRequestSchema = z.object({
+  prompt: z.string().min(1),
+  aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:3', '3:4']).default('16:9'),
+  model: z.enum(['flux', 'gpt_image']).default('flux'),
+  outputFormat: z.enum(['jpeg', 'png']).optional(),
+  seed: z.number().optional(),
+  imageUrl: z.string().url().optional(),
+  guideImageUrl: z.string().url().optional()
+});
+
+export type GenerateImageRequest = z.infer<typeof GenerateImageRequestSchema>;
+
+export const GenerateImageMultiRequestSchema = z.object({
+  prompt: z.string().min(1),
+  imageUrls: z.array(z.string().url()).min(1).max(5),
+  aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:3', '3:4']).default('16:9'),
+  model: z.enum(['flux', 'gpt_image']).default('flux'),
+  outputFormat: z.enum(['jpeg', 'png']).optional(),
+  seed: z.number().optional()
+});
+
+export type GenerateImageMultiRequest = z.infer<typeof GenerateImageMultiRequestSchema>;
+
+export const GenerateVideoRequestSchema = z.object({
+  prompt: z.string().min(1),
+  aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:3', '3:4']).default('16:9'), 
+  duration: z.number().min(1).max(30).default(30),
+  quality: z.enum(['standard', 'cinematic']).default('standard'),
+  imageUrl: z.string().url().optional()
+});
+
+export type GenerateVideoRequest = z.infer<typeof GenerateVideoRequestSchema>;
+
+export const GenerateMusicRequestSchema = z.object({
+  prompt: z.string().min(1),
+  duration: z.number().min(10).max(180).optional(),
+  genre: z.string().optional(),
+  mood: z.string().optional(),
+  lyrics: z.string().optional()
+});
+
+export type GenerateMusicRequest = z.infer<typeof GenerateMusicRequestSchema>;
+
+export const GenerateSpeechRequestSchema = z.object({
+  text: z.string().min(1),
+  voice: z.string().default('af_heart'),
+  language: z.enum([
+    'american-english', 
+    'british-english', 
+    'japanese', 
+    'mandarin-chinese', 
+    'spanish', 
+    'french', 
+    'hindi', 
+    'italian', 
+    'brazilian-portuguese'
+  ]).default('american-english'),
+  speed: z.number().min(0.25).max(4.0).optional()
+});
+
+export type GenerateSpeechRequest = z.infer<typeof GenerateSpeechRequestSchema>;
+
+// Legacy schema for backward compatibility
+export const GenerateAudioRequestSchema = z.object({
+  prompt: z.string().min(1),
+  type: z.enum(['speech', 'music']),
+  voice: z.string().optional(),
+  language: z.string().optional(),
+  duration: z.number().optional()
+});
+
+export type GenerateAudioRequest = z.infer<typeof GenerateAudioRequestSchema>;
+
+export const LibraryRequestSchema = z.object({
+  limit: z.number().min(1).max(100).default(10),
+  offset: z.number().min(0).default(0)
+});
+
+export type LibraryRequest = z.infer<typeof LibraryRequestSchema>;
