@@ -1,6 +1,6 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { AmbienceAPIClient } from './api-client.js';
-import { 
+import {
   GenerateImageRequestSchema,
   GenerateImageMultiRequestSchema,
   GenerateVideoRequestSchema,
@@ -11,6 +11,59 @@ import {
   CreditsResponseSchema
 } from './types.js';
 import { getCompletionTimeInfo } from './constants.js';
+
+/**
+ * Determine media type and MIME type from URL and creation type.
+ * MCP SDK only supports 'text', 'image', and 'audio' content types.
+ * Video content should be skipped (URL is provided in text response instead).
+ */
+export function determineMediaType(url: string, creationType: string): {
+  skip: boolean;
+  contentType?: 'image' | 'audio';
+  mimeType?: string;
+} {
+  // Video check - skip these (MCP SDK doesn't support video)
+  if (creationType === 'video' || url.match(/\.(mp4|webm|mov)$/i)) {
+    return { skip: true };
+  }
+
+  // Extract extension case-insensitively
+  const ext = url.split('.').pop()?.toLowerCase();
+
+  // Image detection
+  if (creationType === 'image' || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext || '')) {
+    const mimeMap: Record<string, string> = {
+      png: 'image/png',
+      gif: 'image/gif',
+      webp: 'image/webp',
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+    };
+    return {
+      skip: false,
+      contentType: 'image',
+      mimeType: mimeMap[ext || ''] || 'image/jpeg',
+    };
+  }
+
+  // Audio detection
+  if (['speech', 'music'].includes(creationType) || ['mp3', 'wav', 'ogg', 'm4a'].includes(ext || '')) {
+    const mimeMap: Record<string, string> = {
+      wav: 'audio/wav',
+      ogg: 'audio/ogg',
+      m4a: 'audio/m4a',
+      mp3: 'audio/mpeg',
+    };
+    return {
+      skip: false,
+      contentType: 'audio',
+      mimeType: mimeMap[ext || ''] || 'audio/mpeg',
+    };
+  }
+
+  // Default to image with generic MIME type
+  return { skip: false, contentType: 'image', mimeType: 'application/octet-stream' };
+}
 
 export class AmbienceAITools {
   private apiClient: AmbienceAPIClient;
@@ -614,18 +667,41 @@ ${libraryText}`
     }
     
     const creation = result.data! as any; // Use any to access both camelCase and snake_case fields
-    
+
     // Build text response with correct field names
-    const statusText = `Creation Status:
+    let statusText = `Creation Status:
 
 ID: ${creation.id}
 Type: ${creation.type}
 Prompt: ${creation.prompt}
 Status: ${creation.status}
-Created: ${creation.createdAt || creation.created_at || 'Unknown'}
-${creation.completedAt || creation.completed_at ? `Completed: ${creation.completedAt || creation.completed_at}` : ''}
-${creation.mediaUrl || creation.url ? `URL: ${creation.mediaUrl || creation.url}` : ''}
-${creation.error ? `Error: ${creation.error}` : ''}`;
+Created: ${creation.createdAt || creation.created_at || 'Unknown'}`;
+
+    // Add polling guidance for pending/processing creations
+    if ((creation.status === 'pending' || creation.status === 'processing') && creation.estimatedCompletionAt) {
+      const estimatedCompletion = new Date(creation.estimatedCompletionAt);
+      // Validate the date is valid before calculating
+      if (!isNaN(estimatedCompletion.getTime())) {
+        const now = new Date();
+        const remainingSeconds = Math.max(0, Math.round((estimatedCompletion.getTime() - now.getTime()) / 1000));
+        statusText += `\nExpected completion: ${creation.estimatedCompletionAt} (in ~${remainingSeconds} seconds)`;
+      }
+
+      if (creation.retryAfterSeconds && typeof creation.retryAfterSeconds === 'number') {
+        statusText += `\nPoll again in: ${creation.retryAfterSeconds} seconds`;
+      }
+    }
+
+    // Add completed/URL/error info
+    if (creation.completedAt || creation.completed_at) {
+      statusText += `\nCompleted: ${creation.completedAt || creation.completed_at}`;
+    }
+    if (creation.mediaUrl || creation.url) {
+      statusText += `\nURL: ${creation.mediaUrl || creation.url}`;
+    }
+    if (creation.error) {
+      statusText += `\nError: ${creation.error}`;
+    }
 
     const content: any[] = [{
       type: 'text' as const,
@@ -654,44 +730,28 @@ ${creation.error ? `Error: ${creation.error}` : ''}`;
    */
   private async fetchMediaAsBase64(url: string, creationType: string) {
     try {
+      const mediaType = determineMediaType(url, creationType);
+
+      // Skip unsupported content types (e.g., video)
+      if (mediaType.skip) {
+        return null;
+      }
+
       const response = await fetch(url, {
         timeout: 30000 // 30 second timeout
       } as any);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const arrayBuffer = await response.arrayBuffer();
       const base64 = Buffer.from(arrayBuffer).toString('base64');
-      
-      // Determine content type and MIME type based on creation type and URL
-      let contentType: 'image' | 'video' | 'audio' = 'image';
-      let mimeType = 'application/octet-stream';
-      
-      if (creationType === 'image' || url.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
-        contentType = 'image';
-        if (url.includes('.png')) mimeType = 'image/png';
-        else if (url.includes('.gif')) mimeType = 'image/gif';
-        else if (url.includes('.webp')) mimeType = 'image/webp';
-        else mimeType = 'image/jpeg';
-      } else if (creationType === 'video' || url.match(/\.(mp4|webm|mov)$/i)) {
-        contentType = 'video';
-        if (url.includes('.webm')) mimeType = 'video/webm';
-        else if (url.includes('.mov')) mimeType = 'video/quicktime';
-        else mimeType = 'video/mp4';
-      } else if (creationType === 'speech' || creationType === 'music' || url.match(/\.(mp3|wav|ogg|m4a)$/i)) {
-        contentType = 'audio';
-        if (url.includes('.wav')) mimeType = 'audio/wav';
-        else if (url.includes('.ogg')) mimeType = 'audio/ogg';
-        else if (url.includes('.m4a')) mimeType = 'audio/m4a';
-        else mimeType = 'audio/mpeg';
-      }
 
       return {
-        type: contentType,
+        type: mediaType.contentType,
         data: base64,
-        mimeType: mimeType
+        mimeType: mediaType.mimeType,
       };
     } catch (error) {
       console.error('Error fetching media:', error);
