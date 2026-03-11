@@ -20,7 +20,7 @@ export const CreationSchema = z.object({
   user_id: z.string(),
   prompt: z.string(),
   status: z.enum(['pending', 'processing', 'completed', 'failed']),
-  type: z.enum(['image', 'video', 'speech', 'music']),
+  type: z.enum(['image', 'video', 'speech', 'music', 'upscale', 'transcription']),
   created_at: z.string(),
   completed_at: z.string().optional(),
   url: z.string().optional(),
@@ -39,7 +39,7 @@ export const GenerateImageRequestSchema = z.object({
   outputFormat: z.enum(['jpeg', 'png']).optional(),
   seed: z.number().optional(),
   imageUrl: z.string().url().optional(),
-  guideImageUrl: z.string().url().optional()
+  guideImageUrl: z.string().url().optional(),
 });
 
 export type GenerateImageRequest = z.infer<typeof GenerateImageRequestSchema>;
@@ -57,10 +57,12 @@ export type GenerateImageMultiRequest = z.infer<typeof GenerateImageMultiRequest
 
 export const GenerateVideoRequestSchema = z.object({
   prompt: z.string().min(1),
-  aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:3', '3:4']).default('16:9'), 
-  duration: z.number().min(1).max(30).default(30),
+  aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:3', '3:4']).default('16:9'),
+  duration: z.number().min(1).max(30).default(5),
   quality: z.enum(['standard', 'cinematic']).default('standard'),
-  imageUrl: z.string().url().optional()
+  imageUrl: z.string().url().optional(),
+  negativePrompt: z.string().optional(),
+  preprocessImagePrompt: z.string().optional(),
 });
 
 export type GenerateVideoRequest = z.infer<typeof GenerateVideoRequestSchema>;
@@ -70,7 +72,7 @@ export const GenerateMusicRequestSchema = z.object({
   duration: z.number().min(10).max(180).optional(),
   genre: z.string().optional(),
   mood: z.string().optional(),
-  lyrics: z.string().optional()
+  lyrics: z.string().optional(),
 });
 
 export type GenerateMusicRequest = z.infer<typeof GenerateMusicRequestSchema>;
@@ -104,6 +106,20 @@ export const GenerateAudioRequestSchema = z.object({
 });
 
 export type GenerateAudioRequest = z.infer<typeof GenerateAudioRequestSchema>;
+
+export const UpscaleImageRequestSchema = z.object({
+  imageUrl: z.string().url(),
+  upscaleFactor: z.number().min(1).max(4).default(2),
+  originalPrompt: z.string().optional()
+});
+
+export type UpscaleImageRequest = z.infer<typeof UpscaleImageRequestSchema>;
+
+export const TranscribeAudioRequestSchema = z.object({
+  audioUrl: z.string().url()
+});
+
+export type TranscribeAudioRequest = z.infer<typeof TranscribeAudioRequestSchema>;
 
 export const LibraryRequestSchema = z.object({
   limit: z.number().min(1).max(100).default(10),

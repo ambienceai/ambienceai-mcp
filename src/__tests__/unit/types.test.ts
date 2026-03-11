@@ -7,6 +7,8 @@ import {
   GenerateMusicRequestSchema,
   GenerateSpeechRequestSchema,
   GenerateAudioRequestSchema,
+  UpscaleImageRequestSchema,
+  TranscribeAudioRequestSchema,
   LibraryRequestSchema,
 } from '../../types.js';
 
@@ -82,7 +84,7 @@ describe('CreationSchema', () => {
   });
 
   it('allows all valid types', () => {
-    ['image', 'video', 'speech', 'music'].forEach((type) => {
+    ['image', 'video', 'speech', 'music', 'upscale', 'transcription'].forEach((type) => {
       expect(() => CreationSchema.parse({ ...validCreation, type })).not.toThrow();
     });
   });
@@ -139,6 +141,7 @@ describe('GenerateImageRequestSchema', () => {
       GenerateImageRequestSchema.parse({ prompt: 'test', imageUrl: 'not-a-url' })
     ).toThrow();
   });
+
 });
 
 describe('GenerateImageMultiRequestSchema', () => {
@@ -200,8 +203,18 @@ describe('GenerateVideoRequestSchema', () => {
   it('parses minimal valid request', () => {
     const result = GenerateVideoRequestSchema.parse({ prompt: 'a video' });
     expect(result.prompt).toBe('a video');
-    expect(result.duration).toBe(30); // default
+    expect(result.duration).toBe(5); // default
     expect(result.quality).toBe('standard'); // default
+  });
+
+  it('accepts negativePrompt and preprocessImagePrompt', () => {
+    const result = GenerateVideoRequestSchema.parse({
+      prompt: 'test',
+      negativePrompt: 'camera movement',
+      preprocessImagePrompt: 'a still frame',
+    });
+    expect(result.negativePrompt).toBe('camera movement');
+    expect(result.preprocessImagePrompt).toBe('a still frame');
   });
 
   it('parses request with custom duration', () => {
@@ -274,6 +287,7 @@ describe('GenerateMusicRequestSchema', () => {
     const result = GenerateMusicRequestSchema.parse({ prompt: 'test', duration: 180 });
     expect(result.duration).toBe(180);
   });
+
 });
 
 describe('GenerateSpeechRequestSchema', () => {
@@ -357,6 +371,59 @@ describe('GenerateAudioRequestSchema (legacy)', () => {
 
   it('requires type field', () => {
     expect(() => GenerateAudioRequestSchema.parse({ prompt: 'test' })).toThrow();
+  });
+});
+
+describe('UpscaleImageRequestSchema', () => {
+  it('parses valid request with defaults', () => {
+    const result = UpscaleImageRequestSchema.parse({
+      imageUrl: 'https://example.com/image.jpg',
+    });
+    expect(result.imageUrl).toBe('https://example.com/image.jpg');
+    expect(result.upscaleFactor).toBe(2); // default
+  });
+
+  it('parses request with all fields', () => {
+    const result = UpscaleImageRequestSchema.parse({
+      imageUrl: 'https://example.com/image.jpg',
+      upscaleFactor: 4,
+      originalPrompt: 'a cat',
+    });
+    expect(result.upscaleFactor).toBe(4);
+    expect(result.originalPrompt).toBe('a cat');
+  });
+
+  it('rejects invalid URL', () => {
+    expect(() => UpscaleImageRequestSchema.parse({ imageUrl: 'not-a-url' })).toThrow();
+  });
+
+  it('rejects upscaleFactor less than 1', () => {
+    expect(() =>
+      UpscaleImageRequestSchema.parse({ imageUrl: 'https://example.com/img.jpg', upscaleFactor: 0 })
+    ).toThrow();
+  });
+
+  it('rejects upscaleFactor greater than 4', () => {
+    expect(() =>
+      UpscaleImageRequestSchema.parse({ imageUrl: 'https://example.com/img.jpg', upscaleFactor: 5 })
+    ).toThrow();
+  });
+});
+
+describe('TranscribeAudioRequestSchema', () => {
+  it('parses valid request', () => {
+    const result = TranscribeAudioRequestSchema.parse({
+      audioUrl: 'https://example.com/audio.mp3',
+    });
+    expect(result.audioUrl).toBe('https://example.com/audio.mp3');
+  });
+
+  it('rejects missing audioUrl', () => {
+    expect(() => TranscribeAudioRequestSchema.parse({})).toThrow();
+  });
+
+  it('rejects invalid URL', () => {
+    expect(() => TranscribeAudioRequestSchema.parse({ audioUrl: 'not-a-url' })).toThrow();
   });
 });
 
