@@ -228,13 +228,6 @@ export class AmbienceAITools {
               type: 'string',
               description: 'The text prompt describing the music to generate (e.g., "upbeat electronic dance music", "calm piano ballad")'
             },
-            duration: {
-              type: 'number',
-              minimum: 10,
-              maximum: 180,
-              description: 'Duration of the music in seconds (10-180 seconds)',
-              default: 30
-            },
             genre: {
               type: 'string',
               description: 'Musical genre (e.g., "rock", "jazz", "classical", "electronic") (optional)'
@@ -317,10 +310,6 @@ export class AmbienceAITools {
               description: 'Language for speech generation (optional)',
               default: 'american-english'
             },
-            duration: {
-              type: 'number',
-              description: 'Duration in seconds for music generation (optional)'
-            }
           },
           required: ['prompt', 'type']
         }
@@ -616,7 +605,6 @@ The multi-image composition is being generated. You can check its status using t
 
 Creation ID: ${result.data?.id}
 Prompt: ${request.prompt}
-${request.duration ? `Duration: ${request.duration} seconds` : ''}
 ${request.genre ? `Genre: ${request.genre}` : ''}
 ${request.mood ? `Mood: ${request.mood}` : ''}
 Status: ${result.data?.status}

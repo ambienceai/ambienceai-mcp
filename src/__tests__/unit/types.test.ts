@@ -259,33 +259,13 @@ describe('GenerateMusicRequestSchema', () => {
   it('parses request with all optional fields', () => {
     const result = GenerateMusicRequestSchema.parse({
       prompt: 'jazz',
-      duration: 60,
       genre: 'jazz',
       mood: 'relaxed',
       lyrics: 'la la la',
     });
-    expect(result.duration).toBe(60);
     expect(result.genre).toBe('jazz');
     expect(result.mood).toBe('relaxed');
     expect(result.lyrics).toBe('la la la');
-  });
-
-  it('rejects duration less than 10', () => {
-    expect(() => GenerateMusicRequestSchema.parse({ prompt: 'test', duration: 9 })).toThrow();
-  });
-
-  it('rejects duration greater than 180', () => {
-    expect(() => GenerateMusicRequestSchema.parse({ prompt: 'test', duration: 181 })).toThrow();
-  });
-
-  it('allows minimum duration of 10', () => {
-    const result = GenerateMusicRequestSchema.parse({ prompt: 'test', duration: 10 });
-    expect(result.duration).toBe(10);
-  });
-
-  it('allows maximum duration of 180', () => {
-    const result = GenerateMusicRequestSchema.parse({ prompt: 'test', duration: 180 });
-    expect(result.duration).toBe(180);
   });
 
 });

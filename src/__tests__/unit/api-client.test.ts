@@ -272,7 +272,6 @@ describe('AmbienceAPIClient', () => {
 
       await client.generateMusic({
         prompt: 'jazz ballad',
-        duration: 60,
         genre: 'jazz',
         mood: 'relaxed',
         lyrics: 'la la la',
@@ -281,7 +280,6 @@ describe('AmbienceAPIClient', () => {
       expect(mockPost).toHaveBeenCalledWith('/api/generate/audio', {
         type: 'music',
         prompt: 'jazz ballad',
-        duration: 60,
         genre: 'jazz',
         mood: 'relaxed',
         lyrics: 'la la la',
@@ -352,13 +350,11 @@ describe('AmbienceAPIClient', () => {
       await client.generateAudio({
         prompt: 'Rock music',
         type: 'music',
-        duration: 30,
       });
 
       expect(mockPost).toHaveBeenCalledWith('/api/generate/audio', {
         type: 'music',
         prompt: 'Rock music',
-        duration: 30,
       });
     });
   });

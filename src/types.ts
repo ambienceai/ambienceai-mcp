@@ -69,7 +69,6 @@ export type GenerateVideoRequest = z.infer<typeof GenerateVideoRequestSchema>;
 
 export const GenerateMusicRequestSchema = z.object({
   prompt: z.string().min(1),
-  duration: z.number().min(10).max(180).optional(),
   genre: z.string().optional(),
   mood: z.string().optional(),
   lyrics: z.string().optional(),
@@ -102,7 +101,6 @@ export const GenerateAudioRequestSchema = z.object({
   type: z.enum(['speech', 'music']),
   voice: z.string().optional(),
   language: z.string().optional(),
-  duration: z.number().optional()
 });
 
 export type GenerateAudioRequest = z.infer<typeof GenerateAudioRequestSchema>;

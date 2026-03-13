@@ -135,7 +135,6 @@ export class AmbienceAPIClient {
       };
 
       // Add optional parameters only if they exist
-      if (request.duration) requestBody.duration = request.duration;
       if (request.genre) requestBody.genre = request.genre;
       if (request.mood) requestBody.mood = request.mood;
       if (request.lyrics) requestBody.lyrics = request.lyrics;
@@ -215,8 +214,7 @@ export class AmbienceAPIClient {
         type: request.type,
         prompt: request.prompt,
         ...(request.voice && { voice: request.voice }),
-        ...(request.language && { language: request.language }),
-        ...(request.duration && { duration: request.duration })
+        ...(request.language && { language: request.language })
       };
 
       const response = await this.client.post('/api/generate/audio', requestBody);
