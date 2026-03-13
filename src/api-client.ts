@@ -1,14 +1,16 @@
 import axios, { AxiosInstance } from 'axios';
-import type { 
-  ApiResponse, 
-  CreditsResponse, 
-  Creation, 
+import type {
+  ApiResponse,
+  CreditsResponse,
+  Creation,
   GenerateImageRequest,
   GenerateImageMultiRequest,
   GenerateVideoRequest,
   GenerateMusicRequest,
   GenerateSpeechRequest,
   GenerateAudioRequest,
+  UpscaleImageRequest,
+  TranscribeAudioRequest,
   LibraryRequest
 } from './types.js';
 
@@ -106,13 +108,13 @@ export class AmbienceAPIClient {
         prompt: request.prompt,
         aspectRatio: request.aspectRatio,
         duration: request.duration,
-        quality: request.quality
+        quality: request.quality,
       };
 
-      // Add optional imageUrl parameter for image-to-video
-      if (request.imageUrl) {
-        requestBody.imageUrl = request.imageUrl;
-      }
+      // Add optional parameters
+      if (request.imageUrl) requestBody.imageUrl = request.imageUrl;
+      if (request.negativePrompt) requestBody.negativePrompt = request.negativePrompt;
+      if (request.preprocessImagePrompt) requestBody.preprocessImagePrompt = request.preprocessImagePrompt;
 
       const response = await this.client.post('/api/generate/video', requestBody);
       
@@ -133,7 +135,6 @@ export class AmbienceAPIClient {
       };
 
       // Add optional parameters only if they exist
-      if (request.duration) requestBody.duration = request.duration;
       if (request.genre) requestBody.genre = request.genre;
       if (request.mood) requestBody.mood = request.mood;
       if (request.lyrics) requestBody.lyrics = request.lyrics;
@@ -170,6 +171,41 @@ export class AmbienceAPIClient {
   }
 
   /**
+   * Upscale an image to higher resolution
+   */
+  async generateUpscale(request: UpscaleImageRequest): Promise<ApiResponse<Creation>> {
+    try {
+      const requestBody: any = {
+        imageUrl: request.imageUrl,
+        upscaleFactor: request.upscaleFactor,
+      };
+
+      if (request.originalPrompt) requestBody.originalPrompt = request.originalPrompt;
+
+      const response = await this.client.post('/api/generate/upscale', requestBody);
+
+      return { success: true, data: response.data as Creation };
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  /**
+   * Transcribe audio to text
+   */
+  async transcribeAudio(request: TranscribeAudioRequest): Promise<ApiResponse<Creation>> {
+    try {
+      const response = await this.client.post('/api/generate/transcription', {
+        audioUrl: request.audioUrl,
+      });
+
+      return { success: true, data: response.data as Creation };
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  /**
    * Generate audio (speech or music) - Legacy method for backward compatibility
    */
   async generateAudio(request: GenerateAudioRequest): Promise<ApiResponse<Creation>> {
@@ -178,8 +214,7 @@ export class AmbienceAPIClient {
         type: request.type,
         prompt: request.prompt,
         ...(request.voice && { voice: request.voice }),
-        ...(request.language && { language: request.language }),
-        ...(request.duration && { duration: request.duration })
+        ...(request.language && { language: request.language })
       };
 
       const response = await this.client.post('/api/generate/audio', requestBody);
@@ -224,15 +259,22 @@ export class AmbienceAPIClient {
   
   private handleError(error: any): ApiResponse<never> {
     if (axios.isAxiosError(error)) {
-      return {
-        success: false,
-        error: error.response?.data?.error || 
-               error.response?.data?.message ||
-               error.message ||
-               'An unknown error occurred'
-      };
+      const data = error.response?.data;
+      const description = data?.error_description || data?.message || data?.error;
+      const errorMessage = description || error.message || 'An unknown error occurred';
+
+      console.error('[MCP API Client] Request failed:', {
+        status: error.response?.status,
+        error: data?.error,
+        description: data?.error_description,
+        message: error.message,
+        url: error.config?.url,
+      });
+
+      return { success: false, error: errorMessage };
     }
-    
+
+    console.error('[MCP API Client] Non-HTTP error:', error);
     return {
       success: false,
       error: error?.message || 'An unknown error occurred'

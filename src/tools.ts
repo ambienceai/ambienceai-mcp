@@ -7,6 +7,8 @@ import {
   GenerateMusicRequestSchema,
   GenerateSpeechRequestSchema,
   GenerateAudioRequestSchema,
+  UpscaleImageRequestSchema,
+  TranscribeAudioRequestSchema,
   LibraryRequestSchema,
   CreditsResponseSchema
 } from './types.js';
@@ -87,8 +89,8 @@ export class AmbienceAITools {
         }
       },
       {
-        name: 'generate_image', 
-        description: 'Generate or edit an image from a text prompt using AI. Supports text-to-image, image-to-image editing, and style transfer.',
+        name: 'generate_image',
+        description: 'Generate or edit an image from a text prompt using AI. Supports text-to-image, image-to-image editing, and style transfer. Prompts are automatically enhanced server-side for optimal quality.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -105,7 +107,7 @@ export class AmbienceAITools {
             model: {
               type: 'string',
               enum: ['flux', 'gpt_image'],
-              description: 'The AI model to use for generation',
+              description: 'The AI model to use. "flux" = Flux 2 Pro (default, best for most images), "gpt_image" = GPT Image (premium, good for text-heavy images). Prompts are automatically enhanced server-side for optimal quality.',
               default: 'flux'
             },
             outputFormat: {
@@ -173,12 +175,12 @@ export class AmbienceAITools {
       },
       {
         name: 'generate_video',
-        description: 'Generate a video from a text prompt or animate an image using AI. Supports text-to-video and image-to-video.',
+        description: 'Generate a video from a text prompt or animate an image. Quality: "standard" (WAN model, 5 seconds) or "cinematic" (Kling model, 10 seconds). Prompts are automatically enhanced server-side for optimal quality.',
         inputSchema: {
           type: 'object',
           properties: {
             prompt: {
-              type: 'string', 
+              type: 'string',
               description: 'The text prompt describing the video to generate or how to animate the input image'
             },
             aspectRatio: {
@@ -197,12 +199,20 @@ export class AmbienceAITools {
             quality: {
               type: 'string',
               enum: ['standard', 'cinematic'],
-              description: 'The AI model quality to use',
+              description: 'Video quality and model. "standard" uses WAN model (fixed 5s), "cinematic" uses Kling model (fixed 10s)',
               default: 'standard'
             },
             imageUrl: {
               type: 'string',
               description: 'URL of an input image to animate into video (optional)'
+            },
+            negativePrompt: {
+              type: 'string',
+              description: 'Elements to suppress from generation (e.g., "camera movement, zoom, pan"). Optional.'
+            },
+            preprocessImagePrompt: {
+              type: 'string',
+              description: 'Description of the first frame for text-to-video. Not used for image-to-video. Optional.'
             }
           },
           required: ['prompt']
@@ -210,20 +220,13 @@ export class AmbienceAITools {
       },
       {
         name: 'generate_music',
-        description: 'Generate music from a text prompt using AI. Create instrumental tracks, songs with lyrics, or ambient soundscapes.',
+        description: 'Generate music from a text prompt using AI. Create instrumental tracks, songs with lyrics, or ambient soundscapes. Prompts are automatically enhanced server-side for optimal quality.',
         inputSchema: {
           type: 'object',
           properties: {
             prompt: {
               type: 'string',
               description: 'The text prompt describing the music to generate (e.g., "upbeat electronic dance music", "calm piano ballad")'
-            },
-            duration: {
-              type: 'number',
-              minimum: 10,
-              maximum: 180,
-              description: 'Duration of the music in seconds (10-180 seconds)',
-              default: 30
             },
             genre: {
               type: 'string',
@@ -307,12 +310,47 @@ export class AmbienceAITools {
               description: 'Language for speech generation (optional)',
               default: 'american-english'
             },
-            duration: {
-              type: 'number',
-              description: 'Duration in seconds for music generation (optional)'
-            }
           },
           required: ['prompt', 'type']
+        }
+      },
+      {
+        name: 'transcribe_audio',
+        description: 'Transcribe audio to text using AI speech recognition. Converts speech to text, generates subtitles or captions.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            audioUrl: {
+              type: 'string',
+              description: 'URL of the audio file to transcribe'
+            }
+          },
+          required: ['audioUrl']
+        }
+      },
+      {
+        name: 'upscale_image',
+        description: 'Upscale an image to higher resolution using AI. Increase image size up to 4x while preserving quality.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            imageUrl: {
+              type: 'string',
+              description: 'URL of the image to upscale'
+            },
+            upscaleFactor: {
+              type: 'number',
+              minimum: 1,
+              maximum: 4,
+              description: 'How much to increase the resolution (1-4x)',
+              default: 2
+            },
+            originalPrompt: {
+              type: 'string',
+              description: 'The original prompt used to generate the image (optional, improves upscale quality)'
+            }
+          },
+          required: ['imageUrl']
         }
       },
       {
@@ -380,7 +418,13 @@ export class AmbienceAITools {
         
       case 'generate_audio':
         return await this.generateAudio(args);
-        
+
+      case 'transcribe_audio':
+        return await this.transcribeAudio(args);
+
+      case 'upscale_image':
+        return await this.upscaleImage(args);
+
       case 'get_library':
         return await this.getLibrary(args);
         
@@ -561,7 +605,6 @@ The multi-image composition is being generated. You can check its status using t
 
 Creation ID: ${result.data?.id}
 Prompt: ${request.prompt}
-${request.duration ? `Duration: ${request.duration} seconds` : ''}
 ${request.genre ? `Genre: ${request.genre}` : ''}
 ${request.mood ? `Mood: ${request.mood}` : ''}
 Status: ${result.data?.status}
@@ -605,6 +648,67 @@ The speech is being generated. You can check its status using the get_creation_s
     };
   }
   
+  private async transcribeAudio(args: any) {
+    const request = TranscribeAudioRequestSchema.parse(args);
+    const result = await this.apiClient.transcribeAudio(request);
+
+    if (!result.success) {
+      return {
+        content: [{
+          type: 'text' as const,
+          text: `Error transcribing audio: ${result.error}`
+        }]
+      };
+    }
+
+    const timeInfo = getCompletionTimeInfo(result.data?.generationType);
+
+    return {
+      content: [{
+        type: 'text' as const,
+        text: `Transcription started successfully!
+
+Creation ID: ${result.data?.id}
+Audio URL: ${request.audioUrl}
+Status: ${result.data?.status}
+Expected completion: ${timeInfo.displayTime}
+
+The transcription is being processed. You can check its status using the get_creation_status tool ${timeInfo.pollingSuggestion}.`
+      }]
+    };
+  }
+
+  private async upscaleImage(args: any) {
+    const request = UpscaleImageRequestSchema.parse(args);
+    const result = await this.apiClient.generateUpscale(request);
+
+    if (!result.success) {
+      return {
+        content: [{
+          type: 'text' as const,
+          text: `Error upscaling image: ${result.error}`
+        }]
+      };
+    }
+
+    const timeInfo = getCompletionTimeInfo(result.data?.generationType);
+
+    return {
+      content: [{
+        type: 'text' as const,
+        text: `Image upscale started successfully!
+
+Creation ID: ${result.data?.id}
+Image URL: ${request.imageUrl}
+Upscale Factor: ${request.upscaleFactor}x
+Status: ${result.data?.status}
+Expected completion: ${timeInfo.displayTime}
+
+The image is being upscaled. You can check its status using the get_creation_status tool ${timeInfo.pollingSuggestion}.`
+      }]
+    };
+  }
+
   private async getLibrary(args: any) {
     const request = LibraryRequestSchema.parse(args || {});
     const result = await this.apiClient.getLibrary(request);

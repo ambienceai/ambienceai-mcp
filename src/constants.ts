@@ -1,15 +1,17 @@
 // Generation type constants - sync with main app
 export const GENERATION_TYPES = {
   TEXT_TO_IMAGE: 'text_to_image',
-  GPT_IMAGE: 'gpt_image', 
+  GPT_IMAGE: 'gpt_image',
   IMAGE_TO_IMAGE: 'image_to_image',
   IMAGE_TO_IMAGE_MULTI: 'image_to_image_multi',
+  IMAGE_UPSCALE: 'image_upscale',
   TEXT_TO_VIDEO: 'text_to_video',
   TEXT_TO_VIDEO_CINEMATIC: 'text_to_video_cinematic',
   IMAGE_TO_VIDEO: 'image_to_video',
   IMAGE_TO_VIDEO_CINEMATIC: 'image_to_video_cinematic',
   TEXT_TO_AUDIO_SPEECH: 'text_to_audio_speech',
   TEXT_TO_AUDIO_MUSIC: 'text_to_audio_music',
+  AUDIO_TRANSCRIPTION: 'audio_transcription',
 } as const;
 
 // Estimated durations in seconds - sync with main app
@@ -18,12 +20,14 @@ export const ESTIMATED_DURATIONS = {
   [GENERATION_TYPES.GPT_IMAGE]: 90, // 90 seconds
   [GENERATION_TYPES.IMAGE_TO_IMAGE]: 35, // 35 seconds
   [GENERATION_TYPES.IMAGE_TO_IMAGE_MULTI]: 35, // 35 seconds
+  [GENERATION_TYPES.IMAGE_UPSCALE]: 30, // 30 seconds
   [GENERATION_TYPES.TEXT_TO_VIDEO]: 270, // 4.5 minutes
   [GENERATION_TYPES.TEXT_TO_VIDEO_CINEMATIC]: 600, // 10 minutes
   [GENERATION_TYPES.IMAGE_TO_VIDEO]: 240, // 4 minutes
   [GENERATION_TYPES.IMAGE_TO_VIDEO_CINEMATIC]: 540, // 9 minutes
   [GENERATION_TYPES.TEXT_TO_AUDIO_SPEECH]: 30, // 30 seconds
   [GENERATION_TYPES.TEXT_TO_AUDIO_MUSIC]: 60, // 1 minute
+  [GENERATION_TYPES.AUDIO_TRANSCRIPTION]: 45, // 45 seconds
 } as const;
 
 // Human-readable display strings - sync with main app
@@ -32,12 +36,14 @@ export const GENERATION_TIMES_DISPLAY = {
   [GENERATION_TYPES.GPT_IMAGE]: "~1.5 minutes",
   [GENERATION_TYPES.IMAGE_TO_IMAGE]: "~35 seconds",
   [GENERATION_TYPES.IMAGE_TO_IMAGE_MULTI]: "~35 seconds",
+  [GENERATION_TYPES.IMAGE_UPSCALE]: "~30 seconds",
   [GENERATION_TYPES.TEXT_TO_VIDEO]: "~4.5 minutes",
   [GENERATION_TYPES.TEXT_TO_VIDEO_CINEMATIC]: "~10 minutes",
   [GENERATION_TYPES.IMAGE_TO_VIDEO]: "~4 minutes",
   [GENERATION_TYPES.IMAGE_TO_VIDEO_CINEMATIC]: "~9 minutes",
   [GENERATION_TYPES.TEXT_TO_AUDIO_SPEECH]: "~30 seconds",
   [GENERATION_TYPES.TEXT_TO_AUDIO_MUSIC]: "~1 minute",
+  [GENERATION_TYPES.AUDIO_TRANSCRIPTION]: "~45 seconds",
 } as const;
 
 /**
