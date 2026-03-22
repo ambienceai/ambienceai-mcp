@@ -198,7 +198,7 @@ describe('AmbienceAPIClient', () => {
   });
 
   describe('generateVideo', () => {
-    it('sends required parameters', async () => {
+    it('sends model instead of quality', async () => {
       mockPost.mockResolvedValue({ data: { id: 'creation-123' } });
       const client = new AmbienceAPIClient('test-token');
 
@@ -206,15 +206,31 @@ describe('AmbienceAPIClient', () => {
         prompt: 'a video',
         aspectRatio: '16:9',
         duration: 10,
-        quality: 'standard',
+        model: 'wan',
       });
 
       expect(mockPost).toHaveBeenCalledWith('/api/generate/video', {
         prompt: 'a video',
         aspectRatio: '16:9',
         duration: 10,
-        quality: 'standard',
+        model: 'wan',
       });
+    });
+
+    it('sends kling model for cinematic video', async () => {
+      mockPost.mockResolvedValue({ data: { id: 'creation-123' } });
+      const client = new AmbienceAPIClient('test-token');
+
+      await client.generateVideo({
+        prompt: 'cinematic scene',
+        aspectRatio: '16:9',
+        duration: 10,
+        model: 'kling',
+      });
+
+      const body = mockPost.mock.calls[0]?.[1] as any;
+      expect(body.model).toBe('kling');
+      expect(body).not.toHaveProperty('quality');
     });
 
     it('includes negativePrompt and preprocessImagePrompt', async () => {
@@ -225,7 +241,7 @@ describe('AmbienceAPIClient', () => {
         prompt: 'a video',
         aspectRatio: '16:9',
         duration: 5,
-        quality: 'standard',
+        model: 'wan',
         negativePrompt: 'camera movement',
         preprocessImagePrompt: 'a still frame',
       });
@@ -243,7 +259,7 @@ describe('AmbienceAPIClient', () => {
         prompt: 'animate this',
         aspectRatio: '16:9',
         duration: 5,
-        quality: 'cinematic',
+        model: 'kling',
         imageUrl: 'https://example.com/source.jpg',
       });
 

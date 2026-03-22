@@ -108,7 +108,7 @@ export class AmbienceAPIClient {
         prompt: request.prompt,
         aspectRatio: request.aspectRatio,
         duration: request.duration,
-        quality: request.quality,
+        model: request.model,
       };
 
       // Add optional parameters

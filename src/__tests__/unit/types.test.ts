@@ -95,7 +95,7 @@ describe('GenerateImageRequestSchema', () => {
     const result = GenerateImageRequestSchema.parse({ prompt: 'a cat' });
     expect(result.prompt).toBe('a cat');
     expect(result.aspectRatio).toBe('16:9'); // default
-    expect(result.model).toBe('flux'); // default
+    expect(result.model).toBe('flux_2_pro'); // default
   });
 
   it('parses request with all optional fields', () => {
@@ -114,6 +114,11 @@ describe('GenerateImageRequestSchema', () => {
     expect(result.seed).toBe(12345);
   });
 
+  it('accepts any string as model (backend validates)', () => {
+    const result = GenerateImageRequestSchema.parse({ prompt: 'test', model: 'nano_banana' });
+    expect(result.model).toBe('nano_banana');
+  });
+
   it('rejects empty prompt', () => {
     expect(() => GenerateImageRequestSchema.parse({ prompt: '' })).toThrow();
   });
@@ -130,10 +135,6 @@ describe('GenerateImageRequestSchema', () => {
     ['16:9', '9:16', '1:1', '4:3', '3:4'].forEach((aspectRatio) => {
       expect(() => GenerateImageRequestSchema.parse({ prompt: 'test', aspectRatio })).not.toThrow();
     });
-  });
-
-  it('validates model enum', () => {
-    expect(() => GenerateImageRequestSchema.parse({ prompt: 'test', model: 'invalid' })).toThrow();
   });
 
   it('validates imageUrl format', () => {
@@ -204,7 +205,7 @@ describe('GenerateVideoRequestSchema', () => {
     const result = GenerateVideoRequestSchema.parse({ prompt: 'a video' });
     expect(result.prompt).toBe('a video');
     expect(result.duration).toBe(5); // default
-    expect(result.quality).toBe('standard'); // default
+    expect(result.model).toBe('wan'); // default
   });
 
   it('accepts negativePrompt and preprocessImagePrompt', () => {
@@ -240,13 +241,14 @@ describe('GenerateVideoRequestSchema', () => {
     expect(result.duration).toBe(30);
   });
 
-  it('validates quality enum', () => {
-    expect(() => GenerateVideoRequestSchema.parse({ prompt: 'test', quality: 'ultra' })).toThrow();
+  it('accepts any string as model (backend validates)', () => {
+    const result = GenerateVideoRequestSchema.parse({ prompt: 'test', model: 'kling' });
+    expect(result.model).toBe('kling');
   });
 
-  it('allows cinematic quality', () => {
-    const result = GenerateVideoRequestSchema.parse({ prompt: 'test', quality: 'cinematic' });
-    expect(result.quality).toBe('cinematic');
+  it('accepts new model values without MCP changes', () => {
+    const result = GenerateVideoRequestSchema.parse({ prompt: 'test', model: 'future_model' });
+    expect(result.model).toBe('future_model');
   });
 });
 

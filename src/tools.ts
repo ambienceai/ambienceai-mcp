@@ -106,9 +106,8 @@ export class AmbienceAITools {
             },
             model: {
               type: 'string',
-              enum: ['flux', 'gpt_image'],
-              description: 'The AI model to use. "flux" = Flux 2 Pro (default, best for most images), "gpt_image" = GPT Image (premium, good for text-heavy images). Prompts are automatically enhanced server-side for optimal quality.',
-              default: 'flux'
+              description: 'The AI model to use. "flux_2_pro" (Flux 2 Pro, fast/versatile, 25 credits, default), "nano_banana" (Nano Banana Pro, fast/budget, 15 credits), "gpt_image" (GPT Image, premium quality, 100 credits). For image editing with an imageUrl, use "nano_banana" or "flux_kontext".',
+              default: 'flux_2_pro'
             },
             outputFormat: {
               type: 'string',
@@ -156,9 +155,8 @@ export class AmbienceAITools {
             },
             model: {
               type: 'string',
-              enum: ['flux', 'gpt_image'],
-              description: 'The AI model to use for generation',
-              default: 'flux'
+              description: 'The AI model for multi-image generation. "flux_kontext" (Flux Kontext, best for multi-image editing/composition, 40 credits, default).',
+              default: 'flux_kontext'
             },
             outputFormat: {
               type: 'string',
@@ -175,7 +173,7 @@ export class AmbienceAITools {
       },
       {
         name: 'generate_video',
-        description: 'Generate a video from a text prompt or animate an image. Quality: "standard" (WAN model, 5 seconds) or "cinematic" (Kling model, 10 seconds). Prompts are automatically enhanced server-side for optimal quality.',
+        description: 'Generate a video from a text prompt or animate an image. Use "wan" model (standard, 5-second videos) or "kling" model (cinematic, 10-second videos). Prompts are automatically enhanced server-side for optimal quality.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -196,11 +194,10 @@ export class AmbienceAITools {
               description: 'Duration of the video in seconds',
               default: 5
             },
-            quality: {
+            model: {
               type: 'string',
-              enum: ['standard', 'cinematic'],
-              description: 'Video quality and model. "standard" uses WAN model (fixed 5s), "cinematic" uses Kling model (fixed 10s)',
-              default: 'standard'
+              description: 'The AI model for video generation. "wan" (WAN 2.1, 5-second videos, 70-100 credits, default), "kling" (Kling 2.1 Pro, 10-second cinematic, 200-250 credits).',
+              default: 'wan'
             },
             imageUrl: {
               type: 'string',
