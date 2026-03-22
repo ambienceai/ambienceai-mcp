@@ -52,9 +52,9 @@ class AmbienceAIMCPServer {
       }
       
       const tools = new AmbienceAITools(authToken);
-      
+
       return {
-        tools: tools.getTools()
+        tools: await tools.getTools()
       };
     });
     

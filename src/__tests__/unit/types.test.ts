@@ -137,10 +137,19 @@ describe('GenerateImageRequestSchema', () => {
     });
   });
 
-  it('validates imageUrl format', () => {
-    expect(() =>
-      GenerateImageRequestSchema.parse({ prompt: 'test', imageUrl: 'not-a-url' })
-    ).toThrow();
+  it('accepts file paths for imageUrl', () => {
+    const result = GenerateImageRequestSchema.parse({ prompt: 'test', imageUrl: '/path/to/image.png' });
+    expect(result.imageUrl).toBe('/path/to/image.png');
+  });
+
+  it('accepts tilde paths for imageUrl', () => {
+    const result = GenerateImageRequestSchema.parse({ prompt: 'test', imageUrl: '~/photos/image.jpg' });
+    expect(result.imageUrl).toBe('~/photos/image.jpg');
+  });
+
+  it('accepts file paths for guideImageUrl', () => {
+    const result = GenerateImageRequestSchema.parse({ prompt: 'test', guideImageUrl: '/path/to/guide.png' });
+    expect(result.guideImageUrl).toBe('/path/to/guide.png');
   });
 
 });
@@ -190,13 +199,12 @@ describe('GenerateImageMultiRequestSchema', () => {
     ).toThrow();
   });
 
-  it('validates each URL in array', () => {
-    expect(() =>
-      GenerateImageMultiRequestSchema.parse({
-        prompt: 'test',
-        imageUrls: ['https://example.com/1.jpg', 'not-a-url'],
-      })
-    ).toThrow();
+  it('accepts file paths in imageUrls array', () => {
+    const result = GenerateImageMultiRequestSchema.parse({
+      prompt: 'test',
+      imageUrls: ['https://example.com/1.jpg', '/path/to/local.png'],
+    });
+    expect(result.imageUrls).toEqual(['https://example.com/1.jpg', '/path/to/local.png']);
   });
 });
 
@@ -375,8 +383,9 @@ describe('UpscaleImageRequestSchema', () => {
     expect(result.originalPrompt).toBe('a cat');
   });
 
-  it('rejects invalid URL', () => {
-    expect(() => UpscaleImageRequestSchema.parse({ imageUrl: 'not-a-url' })).toThrow();
+  it('accepts file paths for imageUrl', () => {
+    const result = UpscaleImageRequestSchema.parse({ imageUrl: '/path/to/image.jpg' });
+    expect(result.imageUrl).toBe('/path/to/image.jpg');
   });
 
   it('rejects upscaleFactor less than 1', () => {

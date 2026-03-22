@@ -1,4 +1,144 @@
-import { determineMediaType } from '../../tools.js';
+import { determineMediaType, getModelsForTasks, buildModelDescription, buildToolCostDescription } from '../../tools.js';
+import type { ModelInfo } from '../../api-client.js';
+
+// Test the file path detection helpers (exported via the module)
+// We test these indirectly through the schema + tool behavior
+
+// ---------------------------------------------------------------------------
+// Sample model data for helper tests
+// ---------------------------------------------------------------------------
+
+const sampleModels: ModelInfo[] = [
+  {
+    uiValue: 'flux_2_pro', id: 'flux-2-pro', displayName: 'Flux 2 Pro',
+    description: 'Fast', mediaCategory: 'image', tier: 'standard',
+    tasks: [{ task: 'text_to_image', creditCost: 25, estimatedDuration: 30, durationDisplay: '~30s' }],
+  },
+  {
+    uiValue: 'nano_banana', id: 'nano-banana-pro', displayName: 'Nano Banana Pro',
+    description: 'Budget', mediaCategory: 'image', tier: 'standard',
+    tasks: [
+      { task: 'text_to_image', creditCost: 15, estimatedDuration: 20, durationDisplay: '~20s' },
+      { task: 'image_to_image', creditCost: 40, estimatedDuration: 25, durationDisplay: '~25s' },
+    ],
+  },
+  {
+    uiValue: 'flux_kontext', id: 'flux-kontext', displayName: 'Flux Kontext',
+    description: 'Editing', mediaCategory: 'image', tier: 'standard',
+    tasks: [
+      { task: 'image_to_image', creditCost: 40, estimatedDuration: 20, durationDisplay: '~20s' },
+      { task: 'image_to_image_multi', creditCost: 40, estimatedDuration: 20, durationDisplay: '~20s' },
+    ],
+  },
+  {
+    uiValue: 'wan', id: 'wan-2.1', displayName: 'WAN 2.1',
+    description: 'Video', mediaCategory: 'video', tier: 'standard',
+    tasks: [
+      { task: 'text_to_video', creditCost: 100, estimatedDuration: 180, durationDisplay: '~3m' },
+      { task: 'image_to_video', creditCost: 70, estimatedDuration: 180, durationDisplay: '~3m' },
+    ],
+  },
+  {
+    uiValue: 'kokoro', id: 'kokoro', displayName: 'Kokoro',
+    description: 'Speech', mediaCategory: 'audio', tier: 'standard',
+    tasks: [{ task: 'text_to_audio_speech', creditCost: 25, estimatedDuration: 30, durationDisplay: '~30s' }],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Helper function tests
+// ---------------------------------------------------------------------------
+
+describe('getModelsForTasks', () => {
+  it('filters models by task type', () => {
+    const result = getModelsForTasks(sampleModels, ['text_to_image']);
+    expect(result.map(m => m.uiValue)).toEqual(['flux_2_pro', 'nano_banana']);
+  });
+
+  it('returns models matching any of multiple task types', () => {
+    const result = getModelsForTasks(sampleModels, ['text_to_image', 'image_to_image']);
+    expect(result.map(m => m.uiValue)).toEqual(['flux_2_pro', 'nano_banana', 'flux_kontext']);
+  });
+
+  it('returns empty array when no models match', () => {
+    const result = getModelsForTasks(sampleModels, ['nonexistent_task']);
+    expect(result).toEqual([]);
+  });
+});
+
+describe('buildModelDescription', () => {
+  it('lists available models with costs and marks default', () => {
+    const desc = buildModelDescription(sampleModels, ['text_to_image'], 'flux_2_pro');
+    expect(desc).toContain('"flux_2_pro"');
+    expect(desc).toContain('25 credits');
+    expect(desc).toContain('default');
+    expect(desc).toContain('"nano_banana"');
+    expect(desc).toContain('15 credits');
+  });
+
+  it('includes image editing hint when image_to_image is in tasks', () => {
+    const desc = buildModelDescription(sampleModels, ['text_to_image', 'image_to_image'], 'flux_2_pro');
+    expect(desc).toContain('Models supporting image editing');
+    expect(desc).toContain('"nano_banana"');
+    expect(desc).toContain('"flux_kontext"');
+  });
+
+  it('returns fallback when no models available', () => {
+    const desc = buildModelDescription([], ['text_to_image'], 'flux_2_pro');
+    expect(desc).toBe('The AI model to use (default: "flux_2_pro").');
+  });
+
+  it('shows credit range for models with multiple task costs', () => {
+    const desc = buildModelDescription(sampleModels, ['text_to_image', 'image_to_image'], 'nano_banana');
+    // nano_banana has 15 and 40 credit tasks
+    expect(desc).toContain('15-40 credits');
+  });
+});
+
+describe('buildToolCostDescription', () => {
+  it('returns cost string for single-model tools', () => {
+    const result = buildToolCostDescription(sampleModels, 'text_to_audio_speech');
+    expect(result).toBe(' (25 credits)');
+  });
+
+  it('returns empty string when no models match', () => {
+    const result = buildToolCostDescription(sampleModels, 'nonexistent_task');
+    expect(result).toBe('');
+  });
+
+  it('returns range for multiple models with different costs', () => {
+    const result = buildToolCostDescription(sampleModels, 'text_to_image');
+    // flux_2_pro: 25, nano_banana: 15
+    expect(result).toBe(' (15-25 credits)');
+  });
+});
+
+describe('isFilePath detection', () => {
+  // We can test this via the relaxed schemas - file paths should now parse successfully
+  it('absolute paths are accepted by relaxed schemas', async () => {
+    const { GenerateImageRequestSchema } = await import('../../types.js');
+    const result = GenerateImageRequestSchema.parse({ prompt: 'test', imageUrl: '/Users/test/image.png' });
+    expect(result.imageUrl).toBe('/Users/test/image.png');
+  });
+
+  it('tilde paths are accepted by relaxed schemas', async () => {
+    const { GenerateImageRequestSchema } = await import('../../types.js');
+    const result = GenerateImageRequestSchema.parse({ prompt: 'test', imageUrl: '~/Desktop/photo.jpg' });
+    expect(result.imageUrl).toBe('~/Desktop/photo.jpg');
+  });
+
+  it('relative paths are accepted by relaxed schemas', async () => {
+    const { GenerateImageRequestSchema } = await import('../../types.js');
+    const result = GenerateImageRequestSchema.parse({ prompt: 'test', imageUrl: './images/photo.jpg' });
+    expect(result.imageUrl).toBe('./images/photo.jpg');
+  });
+
+  it('URLs are still accepted', async () => {
+    const { GenerateImageRequestSchema } = await import('../../types.js');
+    const result = GenerateImageRequestSchema.parse({ prompt: 'test', imageUrl: 'https://example.com/image.png' });
+    expect(result.imageUrl).toBe('https://example.com/image.png');
+  });
+});
 
 describe('determineMediaType', () => {
   describe('video content (should skip - MCP SDK does not support video)', () => {
