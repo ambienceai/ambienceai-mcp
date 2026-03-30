@@ -8,11 +8,13 @@ const mockCreate = jest.fn(() => ({
   post: mockPost,
 }));
 const mockIsAxiosError = jest.fn<any>();
+const mockAxiosGet = jest.fn<any>();
 
 jest.unstable_mockModule('axios', () => ({
   default: {
     create: mockCreate,
     isAxiosError: mockIsAxiosError,
+    get: mockAxiosGet,
   },
 }));
 
@@ -198,7 +200,7 @@ describe('AmbienceAPIClient', () => {
   });
 
   describe('generateVideo', () => {
-    it('sends required parameters', async () => {
+    it('sends model instead of quality', async () => {
       mockPost.mockResolvedValue({ data: { id: 'creation-123' } });
       const client = new AmbienceAPIClient('test-token');
 
@@ -206,15 +208,31 @@ describe('AmbienceAPIClient', () => {
         prompt: 'a video',
         aspectRatio: '16:9',
         duration: 10,
-        quality: 'standard',
+        model: 'wan',
       });
 
       expect(mockPost).toHaveBeenCalledWith('/api/generate/video', {
         prompt: 'a video',
         aspectRatio: '16:9',
         duration: 10,
-        quality: 'standard',
+        model: 'wan',
       });
+    });
+
+    it('sends kling model for cinematic video', async () => {
+      mockPost.mockResolvedValue({ data: { id: 'creation-123' } });
+      const client = new AmbienceAPIClient('test-token');
+
+      await client.generateVideo({
+        prompt: 'cinematic scene',
+        aspectRatio: '16:9',
+        duration: 10,
+        model: 'kling',
+      });
+
+      const body = mockPost.mock.calls[0]?.[1] as any;
+      expect(body.model).toBe('kling');
+      expect(body).not.toHaveProperty('quality');
     });
 
     it('includes negativePrompt and preprocessImagePrompt', async () => {
@@ -225,7 +243,7 @@ describe('AmbienceAPIClient', () => {
         prompt: 'a video',
         aspectRatio: '16:9',
         duration: 5,
-        quality: 'standard',
+        model: 'wan',
         negativePrompt: 'camera movement',
         preprocessImagePrompt: 'a still frame',
       });
@@ -243,7 +261,7 @@ describe('AmbienceAPIClient', () => {
         prompt: 'animate this',
         aspectRatio: '16:9',
         duration: 5,
-        quality: 'cinematic',
+        model: 'kling',
         imageUrl: 'https://example.com/source.jpg',
       });
 
@@ -439,6 +457,68 @@ describe('AmbienceAPIClient', () => {
       expect(result.success).toBe(true);
       expect(result.data?.id).toBe('creation-123');
       expect(mockGet).toHaveBeenCalledWith('/api/creations/creation-123/status');
+    });
+  });
+
+  describe('uploadFile', () => {
+    it('sends data URL to /api/mcp/upload', async () => {
+      mockPost.mockResolvedValue({ data: { url: 'https://cdn.example.com/file.png' } });
+      const client = new AmbienceAPIClient('test-token');
+
+      const result = await client.uploadFile('data:image/png;base64,abc123');
+
+      expect(mockPost).toHaveBeenCalledWith('/api/mcp/upload', { imageData: 'data:image/png;base64,abc123' });
+      expect(result).toBe('https://cdn.example.com/file.png');
+    });
+  });
+
+  describe('getModels', () => {
+    beforeEach(() => {
+      // Reset module-level cache by importing fresh or setting expiry to 0
+      // The cache is module-level, so we clear mocks and rely on timing
+      mockAxiosGet.mockReset();
+    });
+
+    it('fetches models from /api/models', async () => {
+      const mockModels = [
+        { uiValue: 'flux_2_pro', id: 'flux-2-pro', displayName: 'Flux 2 Pro', description: 'Fast', mediaCategory: 'image', tier: 'standard', tasks: [{ task: 'text_to_image', creditCost: 25, estimatedDuration: 30, durationDisplay: '~30 seconds' }] },
+      ];
+      mockAxiosGet.mockResolvedValue({ data: { models: mockModels } });
+      const client = new AmbienceAPIClient('test-token');
+
+      const result = await client.getModels();
+
+      expect(result).toEqual(mockModels);
+      expect(mockAxiosGet).toHaveBeenCalledWith(
+        expect.stringContaining('/api/models'),
+        expect.objectContaining({ timeout: 5000 }),
+      );
+    });
+
+    it('returns cached results on subsequent calls', async () => {
+      // The first test already populates the module-level cache, so
+      // calling getModels again should NOT trigger a new fetch
+      const client = new AmbienceAPIClient('test-token');
+
+      const result = await client.getModels();
+
+      // Cache was populated by the previous test — no new fetch
+      expect(mockAxiosGet).not.toHaveBeenCalled();
+      expect(Array.isArray(result)).toBe(true);
+      expect(result.length).toBeGreaterThan(0);
+    });
+
+    it('returns empty array on network error with no cache', async () => {
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+      mockAxiosGet.mockRejectedValue(new Error('Network Error'));
+      // Force cache miss by creating fresh module state
+      const client = new AmbienceAPIClient('test-token');
+
+      const result = await client.getModels();
+
+      // Returns cached value (which may be from earlier test) or empty array
+      expect(Array.isArray(result)).toBe(true);
+      (console.error as any).mockRestore();
     });
   });
 

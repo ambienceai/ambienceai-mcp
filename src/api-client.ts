@@ -14,11 +14,39 @@ import type {
   LibraryRequest
 } from './types.js';
 
+// ---------------------------------------------------------------------------
+// Model info types (matches GET /api/models response)
+// ---------------------------------------------------------------------------
+
+export interface ModelTaskInfo {
+  task: string;
+  creditCost: number;
+  estimatedDuration: number;
+  durationDisplay: string;
+}
+
+export interface ModelInfo {
+  uiValue: string;
+  id: string;
+  displayName: string;
+  description: string;
+  mediaCategory: string;
+  tier: string;
+  tasks: ModelTaskInfo[];
+}
+
+// Module-level cache for models (5-minute TTL to match API Cache-Control)
+let modelsCache: ModelInfo[] | null = null;
+let modelsCacheExpiry = 0;
+const MODELS_CACHE_TTL_MS = 5 * 60 * 1000;
+
 export class AmbienceAPIClient {
   private client: AxiosInstance;
-  
+  private baseURL: string;
+
   constructor(authToken: string) {
     const baseURL = process.env['AMBIENCE_API_URL'] || 'http://localhost:3000';
+    this.baseURL = baseURL;
     
     this.client = axios.create({
       baseURL,
@@ -108,7 +136,7 @@ export class AmbienceAPIClient {
         prompt: request.prompt,
         aspectRatio: request.aspectRatio,
         duration: request.duration,
-        quality: request.quality,
+        model: request.model,
       };
 
       // Add optional parameters
@@ -226,6 +254,15 @@ export class AmbienceAPIClient {
   }
   
   /**
+   * Upload a file (as data URL) and get back a CDN URL
+   */
+  async uploadFile(dataUrl: string): Promise<string> {
+    const response = await this.client.post('/api/mcp/upload', { imageData: dataUrl });
+    const data = response.data as { url: string };
+    return data.url;
+  }
+
+  /**
    * Get user's library of creations
    */
   async getLibrary(request: LibraryRequest): Promise<ApiResponse<Creation[]>> {
@@ -257,6 +294,30 @@ export class AmbienceAPIClient {
     }
   }
   
+  /**
+   * Get available models with pricing info (public endpoint, no auth needed).
+   * Results are cached for 5 minutes.
+   */
+  async getModels(): Promise<ModelInfo[]> {
+    if (modelsCache && Date.now() < modelsCacheExpiry) {
+      return modelsCache;
+    }
+
+    try {
+      const response = await axios.get(`${this.baseURL}/api/models`, {
+        timeout: 5000,
+        headers: { 'User-Agent': 'AmbienceAI-MCP/1.0.0' },
+      });
+      const data = response.data as { models: ModelInfo[] };
+      modelsCache = data.models;
+      modelsCacheExpiry = Date.now() + MODELS_CACHE_TTL_MS;
+      return modelsCache;
+    } catch (error) {
+      console.error('[MCP API Client] Failed to fetch models:', error instanceof Error ? error.message : error);
+      return modelsCache ?? [];
+    }
+  }
+
   private handleError(error: any): ApiResponse<never> {
     if (axios.isAxiosError(error)) {
       const data = error.response?.data;

@@ -35,20 +35,20 @@ export type Creation = z.infer<typeof CreationSchema>;
 export const GenerateImageRequestSchema = z.object({
   prompt: z.string().min(1),
   aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:3', '3:4']).default('16:9'),
-  model: z.enum(['flux', 'gpt_image']).default('flux'),
+  model: z.string().default('flux_2_pro'),
   outputFormat: z.enum(['jpeg', 'png']).optional(),
   seed: z.number().optional(),
-  imageUrl: z.string().url().optional(),
-  guideImageUrl: z.string().url().optional(),
+  imageUrl: z.string().optional(),
+  guideImageUrl: z.string().optional(),
 });
 
 export type GenerateImageRequest = z.infer<typeof GenerateImageRequestSchema>;
 
 export const GenerateImageMultiRequestSchema = z.object({
   prompt: z.string().min(1),
-  imageUrls: z.array(z.string().url()).min(1).max(5),
+  imageUrls: z.array(z.string()).min(1).max(5),
   aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:3', '3:4']).default('16:9'),
-  model: z.enum(['flux', 'gpt_image']).default('flux'),
+  model: z.string().default('flux_kontext'),
   outputFormat: z.enum(['jpeg', 'png']).optional(),
   seed: z.number().optional()
 });
@@ -59,8 +59,8 @@ export const GenerateVideoRequestSchema = z.object({
   prompt: z.string().min(1),
   aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:3', '3:4']).default('16:9'),
   duration: z.number().min(1).max(30).default(5),
-  quality: z.enum(['standard', 'cinematic']).default('standard'),
-  imageUrl: z.string().url().optional(),
+  model: z.string().default('wan'),
+  imageUrl: z.string().optional(),
   negativePrompt: z.string().optional(),
   preprocessImagePrompt: z.string().optional(),
 });
@@ -106,7 +106,7 @@ export const GenerateAudioRequestSchema = z.object({
 export type GenerateAudioRequest = z.infer<typeof GenerateAudioRequestSchema>;
 
 export const UpscaleImageRequestSchema = z.object({
-  imageUrl: z.string().url(),
+  imageUrl: z.string(),
   upscaleFactor: z.number().min(1).max(4).default(2),
   originalPrompt: z.string().optional()
 });

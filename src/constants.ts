@@ -2,6 +2,7 @@
 export const GENERATION_TYPES = {
   TEXT_TO_IMAGE: 'text_to_image',
   GPT_IMAGE: 'gpt_image',
+  NANO_BANANA_TEXT_TO_IMAGE: 'nano_banana_text_to_image',
   IMAGE_TO_IMAGE: 'image_to_image',
   IMAGE_TO_IMAGE_MULTI: 'image_to_image_multi',
   IMAGE_UPSCALE: 'image_upscale',
@@ -18,6 +19,7 @@ export const GENERATION_TYPES = {
 export const ESTIMATED_DURATIONS = {
   [GENERATION_TYPES.TEXT_TO_IMAGE]: 30, // 30 seconds
   [GENERATION_TYPES.GPT_IMAGE]: 90, // 90 seconds
+  [GENERATION_TYPES.NANO_BANANA_TEXT_TO_IMAGE]: 20, // 20 seconds
   [GENERATION_TYPES.IMAGE_TO_IMAGE]: 35, // 35 seconds
   [GENERATION_TYPES.IMAGE_TO_IMAGE_MULTI]: 35, // 35 seconds
   [GENERATION_TYPES.IMAGE_UPSCALE]: 30, // 30 seconds
@@ -34,6 +36,7 @@ export const ESTIMATED_DURATIONS = {
 export const GENERATION_TIMES_DISPLAY = {
   [GENERATION_TYPES.TEXT_TO_IMAGE]: "~30 seconds",
   [GENERATION_TYPES.GPT_IMAGE]: "~1.5 minutes",
+  [GENERATION_TYPES.NANO_BANANA_TEXT_TO_IMAGE]: "~20 seconds",
   [GENERATION_TYPES.IMAGE_TO_IMAGE]: "~35 seconds",
   [GENERATION_TYPES.IMAGE_TO_IMAGE_MULTI]: "~35 seconds",
   [GENERATION_TYPES.IMAGE_UPSCALE]: "~30 seconds",

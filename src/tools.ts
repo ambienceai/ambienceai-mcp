@@ -1,5 +1,7 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
-import { AmbienceAPIClient } from './api-client.js';
+import { readFile } from 'node:fs/promises';
+import { extname } from 'node:path';
+import { AmbienceAPIClient, type ModelInfo } from './api-client.js';
 import {
   GenerateImageRequestSchema,
   GenerateImageMultiRequestSchema,
@@ -13,6 +15,24 @@ import {
   CreditsResponseSchema
 } from './types.js';
 import { getCompletionTimeInfo } from './constants.js';
+
+const MIME_TYPE_MAP: Record<string, string> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  svg: 'image/svg+xml',
+};
+
+function isFilePath(input: string): boolean {
+  return input.startsWith('/') || input.startsWith('~') || input.startsWith('./');
+}
+
+function getMimeTypeFromPath(filePath: string): string {
+  const ext = extname(filePath).toLowerCase().slice(1);
+  return MIME_TYPE_MAP[ext] || 'application/octet-stream';
+}
 
 /**
  * Determine media type and MIME type from URL and creation type.
@@ -67,17 +87,127 @@ export function determineMediaType(url: string, creationType: string): {
   return { skip: false, contentType: 'image', mimeType: 'application/octet-stream' };
 }
 
+// ---------------------------------------------------------------------------
+// Dynamic model description helpers
+// ---------------------------------------------------------------------------
+
+/** Task types relevant to each MCP tool */
+const TOOL_TASK_MAP: Record<string, string[]> = {
+  generate_image: ['text_to_image', 'image_to_image'],
+  generate_image_multi: ['image_to_image_multi'],
+  generate_video: ['text_to_video', 'image_to_video'],
+  generate_music: ['text_to_audio_music'],
+  generate_speech: ['text_to_audio_speech'],
+  upscale_image: ['image_upscale'],
+  transcribe_audio: ['audio_transcription'],
+};
+
+/** Filter models that support any of the given task types */
+export function getModelsForTasks(models: ModelInfo[], taskTypes: string[]): ModelInfo[] {
+  return models.filter(m =>
+    m.tasks.some(t => taskTypes.includes(t.task))
+  );
+}
+
+/** Build the model parameter description for multi-model tools */
+export function buildModelDescription(
+  models: ModelInfo[],
+  taskTypes: string[],
+  defaultModel: string
+): string {
+  const relevant = getModelsForTasks(models, taskTypes);
+  if (relevant.length === 0) return `The AI model to use (default: "${defaultModel}").`;
+
+  const parts = relevant.map(m => {
+    const tasks = m.tasks.filter(t => taskTypes.includes(t.task));
+    const costs = [...new Set(tasks.map(t => t.creditCost))];
+    const costStr = costs.length === 1 ? `${costs[0]} credits` : `${Math.min(...costs)}-${Math.max(...costs)} credits`;
+    const isDefault = m.uiValue === defaultModel ? ', default' : '';
+    return `"${m.uiValue}" (${m.displayName}, ${costStr}${isDefault})`;
+  });
+
+  let desc = `The AI model to use. Available: ${parts.join(', ')}.`;
+
+  // Add task-specific model hints for image tools
+  if (taskTypes.includes('image_to_image')) {
+    const editModels = relevant
+      .filter(m => m.tasks.some(t => t.task === 'image_to_image'))
+      .map(m => `"${m.uiValue}"`);
+    if (editModels.length > 0 && editModels.length < relevant.length) {
+      desc += ` Models supporting image editing: ${editModels.join(', ')}.`;
+    }
+  }
+
+  return desc;
+}
+
+/** Build cost string for single-model tools, e.g. " (40 credits)" */
+export function buildToolCostDescription(models: ModelInfo[], taskType: string): string {
+  const relevant = getModelsForTasks(models, [taskType]);
+  if (relevant.length === 0) return '';
+  const costs = relevant.flatMap(m => m.tasks.filter(t => t.task === taskType).map(t => t.creditCost));
+  if (costs.length === 0) return '';
+  const unique = [...new Set(costs)];
+  if (unique.length === 1) return ` (${unique[0]} credits)`;
+  return ` (${Math.min(...unique)}-${Math.max(...unique)} credits)`;
+}
+
 export class AmbienceAITools {
   private apiClient: AmbienceAPIClient;
-  
+
   constructor(authToken: string) {
     this.apiClient = new AmbienceAPIClient(authToken);
   }
+
+  /**
+   * Resolve a file path or URL to a CDN URL.
+   * If the input is already an HTTP(S) URL, returns it as-is.
+   * If it's a local file path, reads the file, uploads it, and returns the CDN URL.
+   */
+  private async resolveFileUrl(input: string): Promise<string> {
+    if (!isFilePath(input)) {
+      return input;
+    }
+
+    const filePath = input.startsWith('~')
+      ? input.replace(/^~/, process.env['HOME'] || '')
+      : input;
+
+    const fileBuffer = await readFile(filePath);
+    const mimeType = getMimeTypeFromPath(filePath);
+    const dataUrl = `data:${mimeType};base64,${fileBuffer.toString('base64')}`;
+
+    return await this.apiClient.uploadFile(dataUrl);
+  }
   
   /**
-   * Get all available tools
+   * Get all available tools (fetches model info for dynamic descriptions)
    */
-  getTools(): Tool[] {
+  async getTools(): Promise<Tool[]> {
+    let models: ModelInfo[] = [];
+    try {
+      models = await this.apiClient.getModels();
+    } catch {
+      // Fall back to empty — descriptions will omit cost info
+    }
+
+    const imageModelDesc = models.length > 0
+      ? buildModelDescription(models, TOOL_TASK_MAP['generate_image']!, 'flux_2_pro')
+      : 'The AI model to use (default: "flux_2_pro").';
+
+    const imageMultiModelDesc = models.length > 0
+      ? buildModelDescription(models, TOOL_TASK_MAP['generate_image_multi']!, 'flux_kontext')
+      : 'The AI model for multi-image generation (default: "flux_kontext").';
+
+    const videoModelDesc = models.length > 0
+      ? buildModelDescription(models, TOOL_TASK_MAP['generate_video']!, 'wan')
+      : 'The AI model for video generation (default: "wan").';
+
+    const musicCostStr = buildToolCostDescription(models, 'text_to_audio_music');
+    const speechCostStr = buildToolCostDescription(models, 'text_to_audio_speech');
+    const upscaleCostStr = buildToolCostDescription(models, 'image_upscale');
+    const transcribeCostStr = buildToolCostDescription(models, 'audio_transcription');
+
     return [
       {
         name: 'get_credits',
@@ -106,9 +236,8 @@ export class AmbienceAITools {
             },
             model: {
               type: 'string',
-              enum: ['flux', 'gpt_image'],
-              description: 'The AI model to use. "flux" = Flux 2 Pro (default, best for most images), "gpt_image" = GPT Image (premium, good for text-heavy images). Prompts are automatically enhanced server-side for optimal quality.',
-              default: 'flux'
+              description: imageModelDesc,
+              default: 'flux_2_pro'
             },
             outputFormat: {
               type: 'string',
@@ -121,11 +250,11 @@ export class AmbienceAITools {
             },
             imageUrl: {
               type: 'string',
-              description: 'URL of an input image for image-to-image editing (optional)'
+              description: 'URL or local file path of an input image for image-to-image editing. Supports URLs (https://...) and local paths (/path/to/image.jpg, ~/image.png). (optional)'
             },
             guideImageUrl: {
-              type: 'string', 
-              description: 'URL of a reference image for style transfer or guidance (optional)'
+              type: 'string',
+              description: 'URL or local file path of a reference image for style transfer or guidance. Supports URLs (https://...) and local paths (/path/to/image.jpg, ~/image.png). (optional)'
             }
           },
           required: ['prompt']
@@ -146,7 +275,7 @@ export class AmbienceAITools {
               items: { type: 'string' },
               minItems: 1,
               maxItems: 5,
-              description: 'Array of image URLs to use as inputs (1-5 images)'
+              description: 'Array of image URLs or local file paths to use as inputs (1-5 images). Supports URLs (https://...) and local paths (/path/to/image.jpg, ~/image.png).'
             },
             aspectRatio: {
               type: 'string',
@@ -156,9 +285,8 @@ export class AmbienceAITools {
             },
             model: {
               type: 'string',
-              enum: ['flux', 'gpt_image'],
-              description: 'The AI model to use for generation',
-              default: 'flux'
+              description: imageMultiModelDesc,
+              default: 'flux_kontext'
             },
             outputFormat: {
               type: 'string',
@@ -175,7 +303,7 @@ export class AmbienceAITools {
       },
       {
         name: 'generate_video',
-        description: 'Generate a video from a text prompt or animate an image. Quality: "standard" (WAN model, 5 seconds) or "cinematic" (Kling model, 10 seconds). Prompts are automatically enhanced server-side for optimal quality.',
+        description: 'Generate a video from a text prompt or animate an image. Prompts are automatically enhanced server-side for optimal quality.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -196,15 +324,14 @@ export class AmbienceAITools {
               description: 'Duration of the video in seconds',
               default: 5
             },
-            quality: {
+            model: {
               type: 'string',
-              enum: ['standard', 'cinematic'],
-              description: 'Video quality and model. "standard" uses WAN model (fixed 5s), "cinematic" uses Kling model (fixed 10s)',
-              default: 'standard'
+              description: videoModelDesc,
+              default: 'wan'
             },
             imageUrl: {
               type: 'string',
-              description: 'URL of an input image to animate into video (optional)'
+              description: 'URL or local file path of an input image to animate into video. Supports URLs (https://...) and local paths (/path/to/image.jpg, ~/image.png). (optional)'
             },
             negativePrompt: {
               type: 'string',
@@ -220,7 +347,7 @@ export class AmbienceAITools {
       },
       {
         name: 'generate_music',
-        description: 'Generate music from a text prompt using AI. Create instrumental tracks, songs with lyrics, or ambient soundscapes. Prompts are automatically enhanced server-side for optimal quality.',
+        description: `Generate music from a text prompt using AI${musicCostStr}. Create instrumental tracks, songs with lyrics, or ambient soundscapes. Prompts are automatically enhanced server-side for optimal quality.`,
         inputSchema: {
           type: 'object',
           properties: {
@@ -246,7 +373,7 @@ export class AmbienceAITools {
       },
       {
         name: 'generate_speech',
-        description: 'Generate speech from text using AI text-to-speech. Convert written text into natural-sounding speech.',
+        description: `Generate speech from text using AI text-to-speech${speechCostStr}. Convert written text into natural-sounding speech.`,
         inputSchema: {
           type: 'object',
           properties: {
@@ -262,14 +389,14 @@ export class AmbienceAITools {
             language: {
               type: 'string',
               enum: [
-                'american-english', 
-                'british-english', 
-                'japanese', 
-                'mandarin-chinese', 
-                'spanish', 
-                'french', 
-                'hindi', 
-                'italian', 
+                'american-english',
+                'british-english',
+                'japanese',
+                'mandarin-chinese',
+                'spanish',
+                'french',
+                'hindi',
+                'italian',
                 'brazilian-portuguese'
               ],
               description: 'Language for speech generation',
@@ -293,7 +420,7 @@ export class AmbienceAITools {
           properties: {
             prompt: {
               type: 'string',
-              description: 'The text prompt or script for audio generation'  
+              description: 'The text prompt or script for audio generation'
             },
             type: {
               type: 'string',
@@ -306,7 +433,7 @@ export class AmbienceAITools {
               default: 'af_heart'
             },
             language: {
-              type: 'string', 
+              type: 'string',
               description: 'Language for speech generation (optional)',
               default: 'american-english'
             },
@@ -316,7 +443,7 @@ export class AmbienceAITools {
       },
       {
         name: 'transcribe_audio',
-        description: 'Transcribe audio to text using AI speech recognition. Converts speech to text, generates subtitles or captions.',
+        description: `Transcribe audio to text using AI speech recognition${transcribeCostStr}. Converts speech to text, generates subtitles or captions.`,
         inputSchema: {
           type: 'object',
           properties: {
@@ -330,13 +457,13 @@ export class AmbienceAITools {
       },
       {
         name: 'upscale_image',
-        description: 'Upscale an image to higher resolution using AI. Increase image size up to 4x while preserving quality.',
+        description: `Upscale an image to higher resolution using AI${upscaleCostStr}. Increase image size up to 4x while preserving quality.`,
         inputSchema: {
           type: 'object',
           properties: {
             imageUrl: {
               type: 'string',
-              description: 'URL of the image to upscale'
+              description: 'URL or local file path of the image to upscale. Supports URLs (https://...) and local paths (/path/to/image.jpg, ~/image.png).'
             },
             upscaleFactor: {
               type: 'number',
@@ -368,7 +495,7 @@ export class AmbienceAITools {
             },
             offset: {
               type: 'number',
-              minimum: 0, 
+              minimum: 0,
               description: 'Number of creations to skip for pagination',
               default: 0
             }
@@ -462,6 +589,15 @@ ${credits.credits < 10 ? '⚠️ Low credit balance! Visit ambienceai.com to add
   
   private async generateImage(args: any) {
     const request = GenerateImageRequestSchema.parse(args);
+
+    // Resolve file paths to CDN URLs
+    if (request.imageUrl) {
+      request.imageUrl = await this.resolveFileUrl(request.imageUrl);
+    }
+    if (request.guideImageUrl) {
+      request.guideImageUrl = await this.resolveFileUrl(request.guideImageUrl);
+    }
+
     const result = await this.apiClient.generateImage(request);
     
     if (!result.success) {
@@ -492,6 +628,12 @@ The image is being generated. You can check its status using the get_creation_st
   
   private async generateVideo(args: any) {
     const request = GenerateVideoRequestSchema.parse(args);
+
+    // Resolve file paths to CDN URLs
+    if (request.imageUrl) {
+      request.imageUrl = await this.resolveFileUrl(request.imageUrl);
+    }
+
     const result = await this.apiClient.generateVideo(request);
     
     if (!result.success) {
@@ -554,6 +696,12 @@ The ${request.type} is being generated. You can check its status using the get_c
 
   private async generateImageMulti(args: any) {
     const request = GenerateImageMultiRequestSchema.parse(args);
+
+    // Resolve file paths to CDN URLs
+    request.imageUrls = await Promise.all(
+      request.imageUrls.map(url => this.resolveFileUrl(url))
+    );
+
     const result = await this.apiClient.generateImageMulti(request);
     
     if (!result.success) {
@@ -680,6 +828,10 @@ The transcription is being processed. You can check its status using the get_cre
 
   private async upscaleImage(args: any) {
     const request = UpscaleImageRequestSchema.parse(args);
+
+    // Resolve file paths to CDN URLs
+    request.imageUrl = await this.resolveFileUrl(request.imageUrl);
+
     const result = await this.apiClient.generateUpscale(request);
 
     if (!result.success) {
