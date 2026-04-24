@@ -18,7 +18,7 @@ export const GENERATION_TYPES = {
 // Estimated durations in seconds - sync with main app
 export const ESTIMATED_DURATIONS = {
   [GENERATION_TYPES.TEXT_TO_IMAGE]: 30, // 30 seconds
-  [GENERATION_TYPES.GPT_IMAGE]: 90, // 90 seconds
+  [GENERATION_TYPES.GPT_IMAGE]: 120, // 2 minutes (GPT Image 2 at quality=high)
   [GENERATION_TYPES.NANO_BANANA_TEXT_TO_IMAGE]: 20, // 20 seconds
   [GENERATION_TYPES.IMAGE_TO_IMAGE]: 35, // 35 seconds
   [GENERATION_TYPES.IMAGE_TO_IMAGE_MULTI]: 35, // 35 seconds
@@ -35,7 +35,7 @@ export const ESTIMATED_DURATIONS = {
 // Human-readable display strings - sync with main app
 export const GENERATION_TIMES_DISPLAY = {
   [GENERATION_TYPES.TEXT_TO_IMAGE]: "~30 seconds",
-  [GENERATION_TYPES.GPT_IMAGE]: "~1.5 minutes",
+  [GENERATION_TYPES.GPT_IMAGE]: "~2 minutes",
   [GENERATION_TYPES.NANO_BANANA_TEXT_TO_IMAGE]: "~20 seconds",
   [GENERATION_TYPES.IMAGE_TO_IMAGE]: "~35 seconds",
   [GENERATION_TYPES.IMAGE_TO_IMAGE_MULTI]: "~35 seconds",

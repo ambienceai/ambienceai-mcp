@@ -25,7 +25,7 @@ describe('GENERATION_TYPES', () => {
 describe('ESTIMATED_DURATIONS', () => {
   it('has duration for each generation type', () => {
     expect(ESTIMATED_DURATIONS[GENERATION_TYPES.TEXT_TO_IMAGE]).toBe(30);
-    expect(ESTIMATED_DURATIONS[GENERATION_TYPES.GPT_IMAGE]).toBe(90);
+    expect(ESTIMATED_DURATIONS[GENERATION_TYPES.GPT_IMAGE]).toBe(120);
     expect(ESTIMATED_DURATIONS[GENERATION_TYPES.IMAGE_TO_IMAGE]).toBe(35);
     expect(ESTIMATED_DURATIONS[GENERATION_TYPES.IMAGE_TO_IMAGE_MULTI]).toBe(35);
     expect(ESTIMATED_DURATIONS[GENERATION_TYPES.IMAGE_UPSCALE]).toBe(30);
@@ -52,10 +52,10 @@ describe('getCompletionTimeInfo', () => {
 
     it('returns correct info for GPT_IMAGE', () => {
       const result = getCompletionTimeInfo(GENERATION_TYPES.GPT_IMAGE);
-      expect(result.expectedDuration).toBe(90);
-      expect(result.displayTime).toBe('~1.5 minutes');
-      // 90 * 0.2 = 18, buffer = 18
-      // 90 + 18 = 108 seconds = ~2 minutes
+      expect(result.expectedDuration).toBe(120);
+      expect(result.displayTime).toBe('~2 minutes');
+      // 120 * 0.2 = 24, buffer = 24
+      // 120 + 24 = 144 seconds = ~2 minutes (rounded)
       expect(result.pollingSuggestion).toBe('in about 2 minutes');
     });
 
@@ -143,10 +143,10 @@ describe('getCompletionTimeInfo', () => {
     });
 
     it('uses 20% buffer for medium durations', () => {
-      // GPT_IMAGE: 90 seconds
-      // 90 * 0.2 = 18, which is between 15 and 30
+      // GPT_IMAGE: 120 seconds
+      // 120 * 0.2 = 24, which is between 15 and 30
       const result = getCompletionTimeInfo(GENERATION_TYPES.GPT_IMAGE);
-      // poll time = 90 + 18 = 108 seconds = 1.8 minutes, rounded to 2
+      // poll time = 120 + 24 = 144 seconds = 2.4 minutes, rounded to 2
       expect(result.pollingSuggestion).toContain('2 minutes');
     });
   });
