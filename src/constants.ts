@@ -1,4 +1,12 @@
-// Generation type constants - sync with main app
+import type { ModelInfo } from './api-client.js';
+
+/**
+ * Canonical generation-type string literals returned by the backend's
+ * creation responses. Kept here as a stable union for type narrowing —
+ * this file no longer owns any model-specific data (durations, display
+ * strings, credit costs). Those all live on the backend registry and
+ * reach the MCP via GET /api/models.
+ */
 export const GENERATION_TYPES = {
   TEXT_TO_IMAGE: 'text_to_image',
   GPT_IMAGE: 'gpt_image',
@@ -15,67 +23,76 @@ export const GENERATION_TYPES = {
   AUDIO_TRANSCRIPTION: 'audio_transcription',
 } as const;
 
-// Estimated durations in seconds - sync with main app
-export const ESTIMATED_DURATIONS = {
-  [GENERATION_TYPES.TEXT_TO_IMAGE]: 30, // 30 seconds
-  [GENERATION_TYPES.GPT_IMAGE]: 120, // 2 minutes (GPT Image 2 at quality=high)
-  [GENERATION_TYPES.NANO_BANANA_TEXT_TO_IMAGE]: 20, // 20 seconds
-  [GENERATION_TYPES.IMAGE_TO_IMAGE]: 35, // 35 seconds
-  [GENERATION_TYPES.IMAGE_TO_IMAGE_MULTI]: 35, // 35 seconds
-  [GENERATION_TYPES.IMAGE_UPSCALE]: 30, // 30 seconds
-  [GENERATION_TYPES.TEXT_TO_VIDEO]: 270, // 4.5 minutes
-  [GENERATION_TYPES.TEXT_TO_VIDEO_CINEMATIC]: 600, // 10 minutes
-  [GENERATION_TYPES.IMAGE_TO_VIDEO]: 240, // 4 minutes
-  [GENERATION_TYPES.IMAGE_TO_VIDEO_CINEMATIC]: 540, // 9 minutes
-  [GENERATION_TYPES.TEXT_TO_AUDIO_SPEECH]: 30, // 30 seconds
-  [GENERATION_TYPES.TEXT_TO_AUDIO_MUSIC]: 60, // 1 minute
-  [GENERATION_TYPES.AUDIO_TRANSCRIPTION]: 45, // 45 seconds
-} as const;
+const FALLBACK_DURATION_SECONDS = 60;
+const FALLBACK_DISPLAY_TIME = '~1 minute';
 
-// Human-readable display strings - sync with main app
-export const GENERATION_TIMES_DISPLAY = {
-  [GENERATION_TYPES.TEXT_TO_IMAGE]: "~30 seconds",
-  [GENERATION_TYPES.GPT_IMAGE]: "~2 minutes",
-  [GENERATION_TYPES.NANO_BANANA_TEXT_TO_IMAGE]: "~20 seconds",
-  [GENERATION_TYPES.IMAGE_TO_IMAGE]: "~35 seconds",
-  [GENERATION_TYPES.IMAGE_TO_IMAGE_MULTI]: "~35 seconds",
-  [GENERATION_TYPES.IMAGE_UPSCALE]: "~30 seconds",
-  [GENERATION_TYPES.TEXT_TO_VIDEO]: "~4.5 minutes",
-  [GENERATION_TYPES.TEXT_TO_VIDEO_CINEMATIC]: "~10 minutes",
-  [GENERATION_TYPES.IMAGE_TO_VIDEO]: "~4 minutes",
-  [GENERATION_TYPES.IMAGE_TO_VIDEO_CINEMATIC]: "~9 minutes",
-  [GENERATION_TYPES.TEXT_TO_AUDIO_SPEECH]: "~30 seconds",
-  [GENERATION_TYPES.TEXT_TO_AUDIO_MUSIC]: "~1 minute",
-  [GENERATION_TYPES.AUDIO_TRANSCRIPTION]: "~45 seconds",
-} as const;
+type CreationInfo = {
+  generationType?: string;
+  model?: string;
+} | undefined | null;
 
 /**
- * Get expected completion time and polling guidance for a generation type
+ * Resolve the backend's estimatedDuration + durationDisplay for a creation,
+ * looking up by {model, generationType} against the fetched /api/models list.
+ *
+ * Resolution order:
+ *   1. Exact match on (model.id, task) — the authoritative answer.
+ *   2. Lowest estimatedDuration across any model that supports the task —
+ *      used when `creation.model` is missing or unknown.
+ *   3. Generic fallback (60s / "~1 minute") — used when models is empty.
  */
-export function getCompletionTimeInfo(generationType?: string): {
+export function getCompletionTimeInfo(
+  creation: CreationInfo,
+  models: ModelInfo[]
+): {
   expectedDuration: number;
   displayTime: string;
   pollingSuggestion: string;
 } {
-  const duration = generationType && generationType in ESTIMATED_DURATIONS 
-    ? ESTIMATED_DURATIONS[generationType as keyof typeof ESTIMATED_DURATIONS]
-    : 60; // Default to 1 minute if unknown
-  
-  const displayTime = generationType && generationType in GENERATION_TIMES_DISPLAY
-    ? GENERATION_TIMES_DISPLAY[generationType as keyof typeof GENERATION_TIMES_DISPLAY]
-    : "~1 minute";
+  const task = creation?.generationType;
+  const modelId = creation?.model;
 
-  // Add buffer time for polling guidance (15-30 seconds extra)
+  let duration = FALLBACK_DURATION_SECONDS;
+  let displayTime = FALLBACK_DISPLAY_TIME;
+
+  if (task && models.length > 0) {
+    // 1. Exact (model, task) match.
+    if (modelId) {
+      const matchedModel = models.find(m => m.id === modelId);
+      const matchedTask = matchedModel?.tasks.find(t => t.task === task);
+      if (matchedTask) {
+        duration = matchedTask.estimatedDuration;
+        displayTime = matchedTask.durationDisplay;
+      }
+    }
+
+    // 2. Task-wide fallback: use the lowest duration across models that
+    //    support this task. Underpromises rather than overpromises.
+    if (duration === FALLBACK_DURATION_SECONDS && displayTime === FALLBACK_DISPLAY_TIME) {
+      const taskMatches = models.flatMap(m =>
+        m.tasks.filter(t => t.task === task)
+      );
+      if (taskMatches.length > 0) {
+        const fastest = taskMatches.reduce((acc, t) =>
+          t.estimatedDuration < acc.estimatedDuration ? t : acc
+        );
+        duration = fastest.estimatedDuration;
+        displayTime = fastest.durationDisplay;
+      }
+    }
+  }
+
+  // Polling buffer: 20% of duration, clamped to [15, 30] seconds.
   const pollBuffer = Math.min(30, Math.max(15, duration * 0.2));
   const pollTime = duration + pollBuffer;
-  
-  const pollingSuggestion = pollTime < 60 
+
+  const pollingSuggestion = pollTime < 60
     ? `in about ${Math.round(pollTime)} seconds`
     : `in about ${Math.round(pollTime / 60)} minutes`;
 
   return {
     expectedDuration: duration,
     displayTime,
-    pollingSuggestion
+    pollingSuggestion,
   };
 }
