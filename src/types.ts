@@ -26,7 +26,8 @@ export const CreationSchema = z.object({
   url: z.string().optional(),
   error: z.string().optional(),
   metadata: z.record(z.any()).optional(),
-  generationType: z.string().optional()
+  generationType: z.string().optional(),
+  model: z.string().optional()
 });
 
 export type Creation = z.infer<typeof CreationSchema>;

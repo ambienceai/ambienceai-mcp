@@ -160,6 +160,19 @@ export class AmbienceAITools {
   }
 
   /**
+   * Fetch the authoritative model list from the backend (cached 5 min at the
+   * API-client layer). Used by getCompletionTimeInfo to resolve per-model
+   * polling durations without hardcoded constants in this package.
+   */
+  private async ensureModels(): Promise<ModelInfo[]> {
+    try {
+      return await this.apiClient.getModels();
+    } catch {
+      return [];
+    }
+  }
+
+  /**
    * Resolve a file path or URL to a CDN URL.
    * If the input is already an HTTP(S) URL, returns it as-is.
    * If it's a local file path, reads the file, uploads it, and returns the CDN URL.
@@ -609,7 +622,7 @@ ${credits.credits < 10 ? '⚠️ Low credit balance! Visit ambienceai.com to add
       };
     }
     
-    const timeInfo = getCompletionTimeInfo(result.data?.generationType);
+    const timeInfo = getCompletionTimeInfo(result.data, await this.ensureModels());
     
     return {
       content: [{
@@ -645,7 +658,7 @@ The image is being generated. You can check its status using the get_creation_st
       };
     }
     
-    const timeInfo = getCompletionTimeInfo(result.data?.generationType);
+    const timeInfo = getCompletionTimeInfo(result.data, await this.ensureModels());
     
     return {
       content: [{
@@ -676,7 +689,7 @@ The video is being generated. You can check its status using the get_creation_st
       };
     }
     
-    const timeInfo = getCompletionTimeInfo(result.data?.generationType);
+    const timeInfo = getCompletionTimeInfo(result.data, await this.ensureModels());
     
     return {
       content: [{
@@ -713,7 +726,7 @@ The ${request.type} is being generated. You can check its status using the get_c
       };
     }
     
-    const timeInfo = getCompletionTimeInfo(result.data?.generationType);
+    const timeInfo = getCompletionTimeInfo(result.data, await this.ensureModels());
     
     return {
       content: [{
@@ -744,7 +757,7 @@ The multi-image composition is being generated. You can check its status using t
       };
     }
     
-    const timeInfo = getCompletionTimeInfo(result.data?.generationType);
+    const timeInfo = getCompletionTimeInfo(result.data, await this.ensureModels());
     
     return {
       content: [{
@@ -776,7 +789,7 @@ The music is being generated. You can check its status using the get_creation_st
       };
     }
     
-    const timeInfo = getCompletionTimeInfo(result.data?.generationType);
+    const timeInfo = getCompletionTimeInfo(result.data, await this.ensureModels());
     
     return {
       content: [{
@@ -809,7 +822,7 @@ The speech is being generated. You can check its status using the get_creation_s
       };
     }
 
-    const timeInfo = getCompletionTimeInfo(result.data?.generationType);
+    const timeInfo = getCompletionTimeInfo(result.data, await this.ensureModels());
 
     return {
       content: [{
@@ -843,7 +856,7 @@ The transcription is being processed. You can check its status using the get_cre
       };
     }
 
-    const timeInfo = getCompletionTimeInfo(result.data?.generationType);
+    const timeInfo = getCompletionTimeInfo(result.data, await this.ensureModels());
 
     return {
       content: [{
