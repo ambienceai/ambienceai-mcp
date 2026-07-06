@@ -45,7 +45,9 @@ export class AmbienceAPIClient {
   private baseURL: string;
 
   constructor(authToken: string) {
-    const baseURL = process.env['AMBIENCE_API_URL'] || 'http://localhost:3000';
+    // Defaults to production so `npx @ambienceai/mcp-server` works out of the
+    // box; set AMBIENCE_API_URL (e.g. http://localhost:3000) for local dev.
+    const baseURL = process.env['AMBIENCE_API_URL'] || 'https://www.ambienceai.com';
     this.baseURL = baseURL;
     
     this.client = axios.create({

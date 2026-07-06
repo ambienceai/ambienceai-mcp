@@ -28,13 +28,13 @@ describe('AmbienceAPIClient', () => {
   });
 
   describe('constructor', () => {
-    it('creates axios instance with default baseURL', () => {
+    it('creates axios instance with the production default baseURL', () => {
       delete process.env.AMBIENCE_API_URL;
       new AmbienceAPIClient('test-token');
 
       expect(mockCreate).toHaveBeenCalled();
       const config = (mockCreate.mock.calls as any[][])[0]?.[0];
-      expect(config.baseURL).toBe('http://localhost:3000');
+      expect(config.baseURL).toBe('https://www.ambienceai.com');
     });
 
     it('uses AMBIENCE_API_URL env var when set', () => {

@@ -7,8 +7,17 @@
   "bin": {
     "ambienceai-mcp": "./dist/index.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ambienceai/ambienceai-mcp.git"
+  },
+  "homepage": "https://www.ambienceai.com/guides/connect-claude-mcp",
+  "bugs": {
+    "url": "https://github.com/ambienceai/ambienceai-mcp/issues"
+  },
   "scripts": {
     "build": "tsc",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build",
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
     "test": "NODE_OPTIONS='--experimental-vm-modules' jest",
@@ -36,6 +45,10 @@
     "README.md",
     "LICENSE"
   ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.4",
     "axios": "^1.11.0",
