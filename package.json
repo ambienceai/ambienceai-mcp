@@ -5,7 +5,7 @@
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "ambienceai-mcp": "./dist/index.js"
+    "ambienceai-mcp": "dist/index.js"
   },
   "repository": {
     "type": "git",
@@ -16,8 +16,8 @@
     "url": "https://github.com/ambienceai/ambienceai-mcp/issues"
   },
   "scripts": {
-    "build": "tsc",
-    "prepublishOnly": "npm run typecheck && npm test && npm run build",
+    "build": "tsc -p tsconfig.build.json",
+    "prepublishOnly": "npm run clean && npm run typecheck && npm test && npm run build",
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
     "test": "NODE_OPTIONS='--experimental-vm-modules' jest",
@@ -46,8 +46,7 @@
     "LICENSE"
   ],
   "publishConfig": {
-    "access": "public",
-    "provenance": true
+    "access": "public"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.4",
