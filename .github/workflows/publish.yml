@@ -45,3 +45,7 @@ jobs:
 
       - name: Stage publish
         run: npm stage publish
+        env:
+          # Provenance requires a CI OIDC provider, so it lives here rather
+          # than in publishConfig (which would break local publishes)
+          NPM_CONFIG_PROVENANCE: 'true'
