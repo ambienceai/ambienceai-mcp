@@ -41,7 +41,7 @@ The server uses **stdio transport** (`StdioServerTransport` from `@modelcontextp
 
 ## Environment Variables
 
-- `AMBIENCE_API_URL` — Backend URL (default: `http://localhost:3000`)
+- `AMBIENCE_API_URL` — Backend URL (default: `https://www.ambienceai.com`)
 - `AMBIENCE_ACCESS_TOKEN` — Fallback auth token for dev/testing
 - `PORT` — Server port (default: `3001`, used when not in stdio mode)
 
