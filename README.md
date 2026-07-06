@@ -76,51 +76,16 @@ Available models and credit costs are fetched live from the Ambience AI API, so 
 | `AMBIENCE_ACCESS_TOKEN` | Yes | none | Your Ambience AI API token |
 | `AMBIENCE_API_URL` | No | `https://www.ambienceai.com` | Backend URL; set to `http://localhost:3000` for local development against a dev backend |
 
-## Development
-
-```bash
-git clone https://github.com/ambienceai/ambienceai-mcp.git
-cd ambienceai-mcp
-npm install
-cp .env.example .env   # point AMBIENCE_API_URL at your local backend
-npm run build          # compile TypeScript to dist/
-npm run dev            # watch mode
-npm test               # Jest test suite
-npm run typecheck      # TypeScript check
-```
-
-### Testing the server directly
-
-The MCP Inspector gives you a browser interface to list tools, call them with custom parameters, and inspect responses:
-
-```bash
-export AMBIENCE_ACCESS_TOKEN="your-api-token"
-npx @modelcontextprotocol/inspector node dist/index.js
-```
-
-For command-line testing, add `--cli`:
-
-```bash
-echo '{"method":"tools/call","params":{"name":"get_credits","arguments":{}}}' | npx @modelcontextprotocol/inspector --cli node dist/index.js
-```
-
-There is also a quick automated check in `test-server.js` (`npm run test:server`) that lists tools, checks credits, and exercises image generation and library access.
-
-### Releasing (maintainers)
-
-Releases publish to npm through [trusted publishing](https://docs.npmjs.com/trusted-publishers/) with staged approval — no npm tokens are stored anywhere:
-
-1. Bump the version: `npm version <patch|minor|major>`, then push the commit and tag.
-2. Create a GitHub Release for the tag. CI stages the publish to npm.
-3. Approve the staged version on npmjs.com (requires 2FA) to make it live.
-
 ## Troubleshooting
 
 - **`subscription_required` errors**: MCP access is included with the Business plan. Check that your account or organization is on Business.
 - **Authentication errors**: tokens expire after 90 days, and deleted tokens stop working right away. Create a fresh token in your Ambience AI settings and update your Claude configuration.
 - **Server doesn't appear in Claude**: restart Claude Desktop after editing the config file, and confirm Node.js 18 or newer is installed so `npx` can run.
-- **Connection errors in development**: if you set `AMBIENCE_API_URL` to a local backend, make sure it is running at that URL.
 - **Timeouts**: video and image generation can take a few minutes. Use `get_creation_status` to track long-running creations.
+
+## Contributing
+
+Bug reports and pull requests are welcome on [GitHub](https://github.com/ambienceai/ambienceai-mcp). For development setup, testing, and release guidelines, see [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## License
 
