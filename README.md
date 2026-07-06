@@ -76,14 +76,6 @@ Available models and credit costs are fetched live from the Ambience AI API, so 
 | `AMBIENCE_ACCESS_TOKEN` | Yes | none | Your Ambience AI API token |
 | `AMBIENCE_API_URL` | No | `https://www.ambienceai.com` | Backend URL; set to `http://localhost:3000` for local development against a dev backend |
 
-## Architecture
-
-This server is a stateless proxy:
-
-- **Token forwarding**: your token is sent with each request to the Ambience AI backend, which validates it and enforces permissions
-- **No secrets**: zero API keys or credentials are stored in this codebase, so it is safe to distribute
-- **Backend validation**: authentication, authorization, credits, and billing are all handled by the Ambience AI platform
-
 ## Development
 
 ```bash
