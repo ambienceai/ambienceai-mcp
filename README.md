@@ -106,6 +106,14 @@ echo '{"method":"tools/call","params":{"name":"get_credits","arguments":{}}}' | 
 
 There is also a quick automated check in `test-server.js` (`npm run test:server`) that lists tools, checks credits, and exercises image generation and library access.
 
+### Releasing (maintainers)
+
+Releases publish to npm through [trusted publishing](https://docs.npmjs.com/trusted-publishers/) with staged approval — no npm tokens are stored anywhere:
+
+1. Bump the version: `npm version <patch|minor|major>`, then push the commit and tag.
+2. Create a GitHub Release for the tag. CI stages the publish to npm.
+3. Approve the staged version on npmjs.com (requires 2FA) to make it live.
+
 ## Troubleshooting
 
 - **`subscription_required` errors**: MCP access is included with the Business plan. Check that your account or organization is on Business.
