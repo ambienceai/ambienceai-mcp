@@ -8,11 +8,11 @@ No API keys are stored in this server. It forwards your Ambience AI account toke
 
 **What you need:**
 
-- An Ambience AI account on any [paid plan](https://www.ambienceai.com/pricing) (MCP access is included with Premium, Team, and Business)
+- An Ambience AI account on the [Premium, Team, or Business plan](https://www.ambienceai.com/pricing)
 - Node.js 18 or newer
 - Claude Desktop or Claude Code
 
-New to Ambience AI? [Create an account](https://www.ambienceai.com/pricing) and pick any paid plan, then come back here. Plans start at $15/month and include monthly credits for images, videos, music, and speech.
+New to Ambience AI? [Create an account](https://www.ambienceai.com/pricing) and pick the Premium, Team, or Business plan, then come back here. Plans start at $15/month and include monthly credits for images, videos, music, and speech.
 
 **1. Create your API token**
 
@@ -80,7 +80,7 @@ Available models, credit costs, and default models are fetched live from the Amb
 
 ## Troubleshooting
 
-- **`subscription_required` errors**: MCP access is included with every paid plan (Premium, Team, or Business). Check that your account or organization is on a paid plan, and that your token was created from that account.
+- **`subscription_required` errors**: MCP access is included with the Premium, Team, and Business plans. Check that your account or organization is on one of those plans, and that your token was created from that account.
 - **Authentication errors**: tokens expire after 90 days, and deleted tokens stop working right away. Create a fresh token in your Ambience AI settings and update your Claude configuration.
 - **Server doesn't appear in Claude**: restart Claude Desktop after editing the config file, and confirm Node.js 18 or newer is installed so `npx` can run.
 - **Timeouts**: video and image generation can take a few minutes. Use `get_creation_status` to track long-running creations.

@@ -50,7 +50,7 @@ class AmbienceAIMCPServer {
       if (!authToken) {
         throw new Error(
           'Authentication required. Set the AMBIENCE_ACCESS_TOKEN environment variable to an Ambience AI API token. ' +
-            'Tokens are included with every paid plan (Premium, Team, or Business): sign up at https://www.ambienceai.com/pricing, ' +
+            'Tokens are included with the Premium, Team, and Business plans: sign up at https://www.ambienceai.com/pricing, ' +
             'then create a token in Settings. Setup guide: https://www.ambienceai.com/guides/connect-claude-mcp',
         );
       }
@@ -68,7 +68,7 @@ class AmbienceAIMCPServer {
       if (!authToken) {
         throw new Error(
           'Authentication required. Set the AMBIENCE_ACCESS_TOKEN environment variable to an Ambience AI API token. ' +
-            'Tokens are included with every paid plan (Premium, Team, or Business): sign up at https://www.ambienceai.com/pricing, ' +
+            'Tokens are included with the Premium, Team, and Business plans: sign up at https://www.ambienceai.com/pricing, ' +
             'then create a token in Settings. Setup guide: https://www.ambienceai.com/guides/connect-claude-mcp',
         );
       }

@@ -656,7 +656,8 @@ describe("AmbienceAPIClient", () => {
           status: 403,
           data: {
             error: "subscription_required",
-            error_description: "A paid plan is required for MCP access.",
+            error_description:
+              "A Premium, Team, or Business plan is required for MCP access.",
           },
         },
         message: "Request failed with status code 403",
@@ -671,7 +672,9 @@ describe("AmbienceAPIClient", () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain("A paid plan is required");
+      expect(result.error).toContain(
+        "A Premium, Team, or Business plan is required",
+      );
       expect(result.error).toContain("Premium, Team, or Business");
       expect(result.error).toContain("https://www.ambienceai.com/pricing");
     });

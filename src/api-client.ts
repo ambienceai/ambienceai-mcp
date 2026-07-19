@@ -418,7 +418,7 @@ export class AmbienceAPIClient {
           " Your access token is missing, invalid, or expired. Create a fresh token in your Ambience AI settings (https://www.ambienceai.com/settings/api-token) and update your Claude configuration. Setup guide: https://www.ambienceai.com/guides/connect-claude-mcp";
       } else if (data?.error === "subscription_required") {
         errorMessage +=
-          " MCP access is included with every paid Ambience AI plan (Premium, Team, or Business). Sign up at https://www.ambienceai.com/pricing, then create an API token in Settings. Setup guide: https://www.ambienceai.com/guides/connect-claude-mcp";
+          " MCP access is included with the Ambience AI Premium, Team, and Business plans. Sign up at https://www.ambienceai.com/pricing, then create an API token in Settings. Setup guide: https://www.ambienceai.com/guides/connect-claude-mcp";
       }
 
       console.error("[MCP API Client] Request failed:", {
