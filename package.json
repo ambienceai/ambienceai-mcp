@@ -1,6 +1,6 @@
 {
   "name": "@ambienceai/mcp-server",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Ambience AI MCP Server - Generate images, videos, and audio through Model Context Protocol",
   "type": "module",
   "main": "dist/index.js",
