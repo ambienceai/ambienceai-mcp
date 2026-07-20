@@ -8,9 +8,11 @@ No API keys are stored in this server. It forwards your Ambience AI account toke
 
 **What you need:**
 
-- An Ambience AI account on the [Business plan](https://www.ambienceai.com/pricing) (MCP access is included with Business)
+- An Ambience AI account on the [Premium, Team, or Business plan](https://www.ambienceai.com/pricing)
 - Node.js 18 or newer
 - Claude Desktop or Claude Code
+
+New to Ambience AI? [Create an account](https://www.ambienceai.com/pricing) and pick the Premium, Team, or Business plan, then come back here. Plans start at $15/month and include monthly credits for images, videos, music, and speech.
 
 **1. Create your API token**
 
@@ -47,38 +49,38 @@ Config file locations:
 
 **3. Create something**
 
-Ask Claude: *"Create an image of a cozy cabin in a snowstorm, warm light glowing from the windows."*
+Ask Claude: _"Create an image of a cozy cabin in a snowstorm, warm light glowing from the windows."_
 
 For a full walkthrough with screenshots, see the [setup guide](https://www.ambienceai.com/guides/connect-claude-mcp).
 
 ## Available Tools
 
-| Tool | What it does |
-|------|--------------|
-| `generate_image` | Create an image from a text prompt |
-| `generate_image_multi` | Create an image from multiple input images for editing, composition, or style mixing |
-| `generate_video` | Create a video from a text prompt |
-| `generate_music` | Create instrumental tracks, songs with lyrics, or ambient soundscapes |
-| `generate_speech` | Convert written text into natural-sounding speech |
-| `generate_audio` | Legacy speech and music tool (use `generate_music` or `generate_speech` for better control) |
-| `transcribe_audio` | Convert speech to text, subtitles, or captions |
-| `upscale_image` | Increase image resolution up to 4x while preserving quality |
-| `get_credits` | Check your current credit balance |
-| `get_library` | Browse your generated creations |
-| `get_creation_status` | Check the status of a specific creation |
+| Tool                   | What it does                                                                                |
+| ---------------------- | ------------------------------------------------------------------------------------------- |
+| `generate_image`       | Create an image from a text prompt                                                          |
+| `generate_image_multi` | Create an image from multiple input images for editing, composition, or style mixing        |
+| `generate_video`       | Create a video from a text prompt                                                           |
+| `generate_music`       | Create instrumental tracks, songs with lyrics, or ambient soundscapes                       |
+| `generate_speech`      | Convert written text into natural-sounding speech                                           |
+| `generate_audio`       | Legacy speech and music tool (use `generate_music` or `generate_speech` for better control) |
+| `transcribe_audio`     | Convert speech to text, subtitles, or captions                                              |
+| `upscale_image`        | Increase image resolution up to 4x while preserving quality                                 |
+| `get_credits`          | Check your current credit balance                                                           |
+| `get_library`          | Browse your generated creations                                                             |
+| `get_creation_status`  | Check the status of a specific creation                                                     |
 
-Available models and credit costs are fetched live from the Ambience AI API, so tool descriptions stay current without a server update.
+Available models, credit costs, and default models are fetched live from the Ambience AI API, so tool descriptions stay current without a server update. Omitting the model parameter uses the server's current recommended default.
 
 ## Configuration
 
-| Environment variable | Required | Default | Purpose |
-|----------------------|----------|---------|---------|
-| `AMBIENCE_ACCESS_TOKEN` | Yes | none | Your Ambience AI API token |
-| `AMBIENCE_API_URL` | No | `https://www.ambienceai.com` | Backend URL; set to `http://localhost:3000` for local development against a dev backend |
+| Environment variable    | Required | Default                      | Purpose                                                                                 |
+| ----------------------- | -------- | ---------------------------- | --------------------------------------------------------------------------------------- |
+| `AMBIENCE_ACCESS_TOKEN` | Yes      | none                         | Your Ambience AI API token                                                              |
+| `AMBIENCE_API_URL`      | No       | `https://www.ambienceai.com` | Backend URL; set to `http://localhost:3000` for local development against a dev backend |
 
 ## Troubleshooting
 
-- **`subscription_required` errors**: MCP access is included with the Business plan. Check that your account or organization is on Business.
+- **`subscription_required` errors**: MCP access is included with the Premium, Team, and Business plans. Check that your account or organization is on one of those plans, and that your token was created from that account.
 - **Authentication errors**: tokens expire after 90 days, and deleted tokens stop working right away. Create a fresh token in your Ambience AI settings and update your Claude configuration.
 - **Server doesn't appear in Claude**: restart Claude Desktop after editing the config file, and confirm Node.js 18 or newer is installed so `npx` can run.
 - **Timeouts**: video and image generation can take a few minutes. Use `get_creation_status` to track long-running creations.

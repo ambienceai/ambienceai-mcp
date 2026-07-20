@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 // API Response types
 export interface ApiResponse<T = unknown> {
@@ -9,7 +9,7 @@ export interface ApiResponse<T = unknown> {
 
 // Credits API response
 export const CreditsResponseSchema = z.object({
-  credits: z.number()
+  credits: z.number(),
 });
 
 export type CreditsResponse = z.infer<typeof CreditsResponseSchema>;
@@ -19,15 +19,22 @@ export const CreationSchema = z.object({
   id: z.string(),
   user_id: z.string(),
   prompt: z.string(),
-  status: z.enum(['pending', 'processing', 'completed', 'failed']),
-  type: z.enum(['image', 'video', 'speech', 'music', 'upscale', 'transcription']),
+  status: z.enum(["pending", "processing", "completed", "failed"]),
+  type: z.enum([
+    "image",
+    "video",
+    "speech",
+    "music",
+    "upscale",
+    "transcription",
+  ]),
   created_at: z.string(),
   completed_at: z.string().optional(),
   url: z.string().optional(),
   error: z.string().optional(),
   metadata: z.record(z.any()).optional(),
   generationType: z.string().optional(),
-  model: z.string().optional()
+  model: z.string().optional(),
 });
 
 export type Creation = z.infer<typeof CreationSchema>;
@@ -35,9 +42,11 @@ export type Creation = z.infer<typeof CreationSchema>;
 // Generation request schemas
 export const GenerateImageRequestSchema = z.object({
   prompt: z.string().min(1),
-  aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:3', '3:4']).default('16:9'),
-  model: z.string().default('flux_2_pro'),
-  outputFormat: z.enum(['jpeg', 'png']).optional(),
+  aspectRatio: z.enum(["16:9", "9:16", "1:1", "4:3", "3:4"]).default("16:9"),
+  // No client-side default: an omitted model is left out of the API request so
+  // the server's current default applies (see /api/models `defaults`).
+  model: z.string().optional(),
+  outputFormat: z.enum(["jpeg", "png"]).optional(),
   seed: z.number().optional(),
   imageUrl: z.string().optional(),
   guideImageUrl: z.string().optional(),
@@ -48,19 +57,23 @@ export type GenerateImageRequest = z.infer<typeof GenerateImageRequestSchema>;
 export const GenerateImageMultiRequestSchema = z.object({
   prompt: z.string().min(1),
   imageUrls: z.array(z.string()).min(1).max(5),
-  aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:3', '3:4']).default('16:9'),
-  model: z.string().default('flux_kontext'),
-  outputFormat: z.enum(['jpeg', 'png']).optional(),
-  seed: z.number().optional()
+  aspectRatio: z.enum(["16:9", "9:16", "1:1", "4:3", "3:4"]).default("16:9"),
+  // No client-side default: the server resolves omitted models.
+  model: z.string().optional(),
+  outputFormat: z.enum(["jpeg", "png"]).optional(),
+  seed: z.number().optional(),
 });
 
-export type GenerateImageMultiRequest = z.infer<typeof GenerateImageMultiRequestSchema>;
+export type GenerateImageMultiRequest = z.infer<
+  typeof GenerateImageMultiRequestSchema
+>;
 
 export const GenerateVideoRequestSchema = z.object({
   prompt: z.string().min(1),
-  aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:3', '3:4']).default('16:9'),
+  aspectRatio: z.enum(["16:9", "9:16", "1:1", "4:3", "3:4"]).default("16:9"),
   duration: z.number().min(1).max(30).default(5),
-  model: z.string().default('wan'),
+  // No client-side default: the server resolves omitted models.
+  model: z.string().optional(),
   imageUrl: z.string().optional(),
   negativePrompt: z.string().optional(),
   preprocessImagePrompt: z.string().optional(),
@@ -79,19 +92,21 @@ export type GenerateMusicRequest = z.infer<typeof GenerateMusicRequestSchema>;
 
 export const GenerateSpeechRequestSchema = z.object({
   text: z.string().min(1),
-  voice: z.string().default('af_heart'),
-  language: z.enum([
-    'american-english', 
-    'british-english', 
-    'japanese', 
-    'mandarin-chinese', 
-    'spanish', 
-    'french', 
-    'hindi', 
-    'italian', 
-    'brazilian-portuguese'
-  ]).default('american-english'),
-  speed: z.number().min(0.25).max(4.0).optional()
+  voice: z.string().default("af_heart"),
+  language: z
+    .enum([
+      "american-english",
+      "british-english",
+      "japanese",
+      "mandarin-chinese",
+      "spanish",
+      "french",
+      "hindi",
+      "italian",
+      "brazilian-portuguese",
+    ])
+    .default("american-english"),
+  speed: z.number().min(0.25).max(4.0).optional(),
 });
 
 export type GenerateSpeechRequest = z.infer<typeof GenerateSpeechRequestSchema>;
@@ -99,7 +114,7 @@ export type GenerateSpeechRequest = z.infer<typeof GenerateSpeechRequestSchema>;
 // Legacy schema for backward compatibility
 export const GenerateAudioRequestSchema = z.object({
   prompt: z.string().min(1),
-  type: z.enum(['speech', 'music']),
+  type: z.enum(["speech", "music"]),
   voice: z.string().optional(),
   language: z.string().optional(),
 });
@@ -109,20 +124,22 @@ export type GenerateAudioRequest = z.infer<typeof GenerateAudioRequestSchema>;
 export const UpscaleImageRequestSchema = z.object({
   imageUrl: z.string(),
   upscaleFactor: z.number().min(1).max(4).default(2),
-  originalPrompt: z.string().optional()
+  originalPrompt: z.string().optional(),
 });
 
 export type UpscaleImageRequest = z.infer<typeof UpscaleImageRequestSchema>;
 
 export const TranscribeAudioRequestSchema = z.object({
-  audioUrl: z.string().url()
+  audioUrl: z.string().url(),
 });
 
-export type TranscribeAudioRequest = z.infer<typeof TranscribeAudioRequestSchema>;
+export type TranscribeAudioRequest = z.infer<
+  typeof TranscribeAudioRequestSchema
+>;
 
 export const LibraryRequestSchema = z.object({
   limit: z.number().min(1).max(100).default(10),
-  offset: z.number().min(0).default(0)
+  offset: z.number().min(0).default(0),
 });
 
 export type LibraryRequest = z.infer<typeof LibraryRequestSchema>;

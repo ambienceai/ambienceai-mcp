@@ -1,6 +1,6 @@
 {
   "name": "@ambienceai/mcp-server",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Ambience AI MCP Server - Generate images, videos, and audio through Model Context Protocol",
   "type": "module",
   "main": "dist/index.js",
@@ -25,7 +25,9 @@
     "test:coverage": "NODE_OPTIONS='--experimental-vm-modules' jest --coverage",
     "test:server": "node test-server.js",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "keywords": [
     "mcp",
@@ -58,6 +60,7 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^24.3.0",
     "jest": "^30.2.0",
+    "prettier": "3.9.5",
     "ts-jest": "^29.4.6",
     "tsx": "^4.20.4",
     "typescript": "^5.9.2"

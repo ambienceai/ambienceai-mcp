@@ -1,4 +1,4 @@
-import { jest, describe, it, expect, beforeEach } from '@jest/globals';
+import { jest, describe, it, expect, beforeEach } from "@jest/globals";
 
 // For ESM, we need to mock before importing
 const mockGet = jest.fn<any>();
@@ -10,7 +10,7 @@ const mockCreate = jest.fn(() => ({
 const mockIsAxiosError = jest.fn<any>();
 const mockAxiosGet = jest.fn<any>();
 
-jest.unstable_mockModule('axios', () => ({
+jest.unstable_mockModule("axios", () => ({
   default: {
     create: mockCreate,
     isAxiosError: mockIsAxiosError,
@@ -19,500 +19,585 @@ jest.unstable_mockModule('axios', () => ({
 }));
 
 // Import after mocking
-const { AmbienceAPIClient } = await import('../../api-client.js');
+const { AmbienceAPIClient, clearModelCache } =
+  await import("../../api-client.js");
 
-describe('AmbienceAPIClient', () => {
+describe("AmbienceAPIClient", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockIsAxiosError.mockImplementation((error: any) => error?.isAxiosError === true);
+    mockIsAxiosError.mockImplementation(
+      (error: any) => error?.isAxiosError === true,
+    );
   });
 
-  describe('constructor', () => {
-    it('creates axios instance with the production default baseURL', () => {
+  describe("constructor", () => {
+    it("creates axios instance with the production default baseURL", () => {
       delete process.env.AMBIENCE_API_URL;
-      new AmbienceAPIClient('test-token');
+      new AmbienceAPIClient("test-token");
 
       expect(mockCreate).toHaveBeenCalled();
       const config = (mockCreate.mock.calls as any[][])[0]?.[0];
-      expect(config.baseURL).toBe('https://www.ambienceai.com');
+      expect(config.baseURL).toBe("https://www.ambienceai.com");
     });
 
-    it('uses AMBIENCE_API_URL env var when set', () => {
-      process.env.AMBIENCE_API_URL = 'https://api.ambience.ai';
-      new AmbienceAPIClient('test-token');
+    it("uses AMBIENCE_API_URL env var when set", () => {
+      process.env.AMBIENCE_API_URL = "https://api.ambience.ai";
+      new AmbienceAPIClient("test-token");
 
       const config = (mockCreate.mock.calls as any[][])[0]?.[0];
-      expect(config.baseURL).toBe('https://api.ambience.ai');
+      expect(config.baseURL).toBe("https://api.ambience.ai");
       delete process.env.AMBIENCE_API_URL;
     });
 
-    it('adds Bearer prefix to token', () => {
-      new AmbienceAPIClient('my-token');
+    it("adds Bearer prefix to token", () => {
+      new AmbienceAPIClient("my-token");
 
       const config = (mockCreate.mock.calls as any[][])[0]?.[0];
-      expect(config.headers.Authorization).toBe('Bearer my-token');
+      expect(config.headers.Authorization).toBe("Bearer my-token");
     });
 
-    it('does not double-prefix token with Bearer', () => {
-      new AmbienceAPIClient('Bearer already-prefixed');
+    it("does not double-prefix token with Bearer", () => {
+      new AmbienceAPIClient("Bearer already-prefixed");
 
       const config = (mockCreate.mock.calls as any[][])[0]?.[0];
-      expect(config.headers.Authorization).toBe('Bearer already-prefixed');
+      expect(config.headers.Authorization).toBe("Bearer already-prefixed");
     });
 
-    it('sets correct timeout and headers', () => {
-      new AmbienceAPIClient('test-token');
+    it("sets correct timeout and headers", () => {
+      new AmbienceAPIClient("test-token");
 
       const config = (mockCreate.mock.calls as any[][])[0]?.[0];
       expect(config.timeout).toBe(300000);
-      expect(config.headers['Content-Type']).toBe('application/json');
-      expect(config.headers['User-Agent']).toBe('AmbienceAI-MCP/1.0.0');
+      expect(config.headers["Content-Type"]).toBe("application/json");
+      expect(config.headers["User-Agent"]).toBe("AmbienceAI-MCP/1.0.0");
     });
   });
 
-  describe('getCredits', () => {
-    it('returns credits on success', async () => {
+  describe("getCredits", () => {
+    it("returns credits on success", async () => {
       mockGet.mockResolvedValue({ data: { credits: 100 } });
-      const client = new AmbienceAPIClient('test-token');
+      const client = new AmbienceAPIClient("test-token");
 
       const result = await client.getCredits();
 
       expect(result.success).toBe(true);
       expect(result.data).toEqual({ credits: 100 });
-      expect(mockGet).toHaveBeenCalledWith('/api/credits');
+      expect(mockGet).toHaveBeenCalledWith("/api/credits");
     });
 
-    it('handles error response', async () => {
-      jest.spyOn(console, 'error').mockImplementation(() => {});
+    it("handles error response", async () => {
+      jest.spyOn(console, "error").mockImplementation(() => {});
       const axiosError = {
         isAxiosError: true,
-        response: { status: 401, data: { error: 'unauthorized', error_description: 'Authentication required' } },
-        message: 'Request failed',
-        config: { url: '/api/credits' },
+        response: {
+          status: 401,
+          data: {
+            error: "unauthorized",
+            error_description: "Authentication required",
+          },
+        },
+        message: "Request failed",
+        config: { url: "/api/credits" },
       };
       mockGet.mockRejectedValue(axiosError);
-      const client = new AmbienceAPIClient('test-token');
+      const client = new AmbienceAPIClient("test-token");
 
       const result = await client.getCredits();
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Authentication required');
+      expect(result.error).toContain("Authentication required");
+      expect(result.error).toContain(
+        "https://www.ambienceai.com/guides/connect-claude-mcp",
+      );
       (console.error as any).mockRestore();
     });
   });
 
-  describe('generateImage', () => {
-    it('sends required parameters', async () => {
+  describe("generateImage", () => {
+    it("sends required parameters", async () => {
       mockPost.mockResolvedValue({
-        data: { id: 'creation-123', status: 'pending' },
+        data: { id: "creation-123", status: "pending" },
       });
-      const client = new AmbienceAPIClient('test-token');
+      const client = new AmbienceAPIClient("test-token");
 
       await client.generateImage({
-        prompt: 'a cat',
-        aspectRatio: '16:9',
-        model: 'flux',
+        prompt: "a cat",
+        aspectRatio: "16:9",
+        model: "flux",
       });
 
-      expect(mockPost).toHaveBeenCalledWith('/api/generate/image', {
-        prompt: 'a cat',
-        aspectRatio: '16:9',
-        model: 'flux',
+      expect(mockPost).toHaveBeenCalledWith("/api/generate/image", {
+        prompt: "a cat",
+        aspectRatio: "16:9",
+        model: "flux",
       });
     });
 
-    it('includes optional parameters when provided', async () => {
-      mockPost.mockResolvedValue({ data: { id: 'creation-123' } });
-      const client = new AmbienceAPIClient('test-token');
+    it("includes optional parameters when provided", async () => {
+      mockPost.mockResolvedValue({ data: { id: "creation-123" } });
+      const client = new AmbienceAPIClient("test-token");
 
       await client.generateImage({
-        prompt: 'a cat',
-        aspectRatio: '1:1',
-        model: 'gpt_image',
+        prompt: "a cat",
+        aspectRatio: "1:1",
+        model: "gpt_image",
         seed: 12345,
-        outputFormat: 'png',
-        imageUrl: 'https://example.com/input.jpg',
-        guideImageUrl: 'https://example.com/guide.jpg',
+        outputFormat: "png",
+        imageUrl: "https://example.com/input.jpg",
+        guideImageUrl: "https://example.com/guide.jpg",
       });
 
-      expect(mockPost).toHaveBeenCalledWith('/api/generate/image', {
-        prompt: 'a cat',
-        aspectRatio: '1:1',
-        model: 'gpt_image',
+      expect(mockPost).toHaveBeenCalledWith("/api/generate/image", {
+        prompt: "a cat",
+        aspectRatio: "1:1",
+        model: "gpt_image",
         seed: 12345,
-        outputFormat: 'png',
-        imageUrl: 'https://example.com/input.jpg',
-        guideImageUrl: 'https://example.com/guide.jpg',
+        outputFormat: "png",
+        imageUrl: "https://example.com/input.jpg",
+        guideImageUrl: "https://example.com/guide.jpg",
       });
     });
 
-    it('excludes undefined optional parameters', async () => {
-      mockPost.mockResolvedValue({ data: { id: 'creation-123' } });
-      const client = new AmbienceAPIClient('test-token');
+    it("omits model from the request when not provided, so the server default applies", async () => {
+      mockPost.mockResolvedValue({ data: { id: "creation-123" } });
+      const client = new AmbienceAPIClient("test-token");
 
       await client.generateImage({
-        prompt: 'a cat',
-        aspectRatio: '16:9',
-        model: 'flux',
+        prompt: "a cat",
+        aspectRatio: "16:9",
+      });
+
+      const callArgs = mockPost.mock.calls[0]?.[1] as Record<string, unknown>;
+      expect(callArgs).not.toHaveProperty("model");
+      expect(callArgs.prompt).toBe("a cat");
+    });
+
+    it("excludes undefined optional parameters", async () => {
+      mockPost.mockResolvedValue({ data: { id: "creation-123" } });
+      const client = new AmbienceAPIClient("test-token");
+
+      await client.generateImage({
+        prompt: "a cat",
+        aspectRatio: "16:9",
+        model: "flux",
         seed: undefined,
         outputFormat: undefined,
       });
 
       const callArgs = mockPost.mock.calls[0]?.[1] as Record<string, unknown>;
-      expect(callArgs).not.toHaveProperty('seed');
-      expect(callArgs).not.toHaveProperty('outputFormat');
+      expect(callArgs).not.toHaveProperty("seed");
+      expect(callArgs).not.toHaveProperty("outputFormat");
     });
   });
 
-  describe('generateImageMulti', () => {
-    it('maps first image to imageUrl', async () => {
-      mockPost.mockResolvedValue({ data: { id: 'creation-123' } });
-      const client = new AmbienceAPIClient('test-token');
+  describe("generateImageMulti", () => {
+    it("maps first image to imageUrl", async () => {
+      mockPost.mockResolvedValue({ data: { id: "creation-123" } });
+      const client = new AmbienceAPIClient("test-token");
 
       await client.generateImageMulti({
-        prompt: 'combine images',
-        imageUrls: ['https://example.com/1.jpg'],
-        aspectRatio: '16:9',
-        model: 'flux',
+        prompt: "combine images",
+        imageUrls: ["https://example.com/1.jpg"],
+        aspectRatio: "16:9",
+        model: "flux",
       });
 
-      expect(mockPost).toHaveBeenCalledWith('/api/generate/image', expect.anything());
+      expect(mockPost).toHaveBeenCalledWith(
+        "/api/generate/image",
+        expect.anything(),
+      );
       const body = mockPost.mock.calls[0]?.[1] as any;
-      expect(body.imageUrl).toBe('https://example.com/1.jpg');
+      expect(body.imageUrl).toBe("https://example.com/1.jpg");
     });
 
-    it('maps second image to guideImageUrl', async () => {
-      mockPost.mockResolvedValue({ data: { id: 'creation-123' } });
-      const client = new AmbienceAPIClient('test-token');
+    it("maps second image to guideImageUrl", async () => {
+      mockPost.mockResolvedValue({ data: { id: "creation-123" } });
+      const client = new AmbienceAPIClient("test-token");
 
       await client.generateImageMulti({
-        prompt: 'combine images',
-        imageUrls: ['https://example.com/1.jpg', 'https://example.com/2.jpg'],
-        aspectRatio: '16:9',
-        model: 'flux',
+        prompt: "combine images",
+        imageUrls: ["https://example.com/1.jpg", "https://example.com/2.jpg"],
+        aspectRatio: "16:9",
+        model: "flux",
       });
 
-      expect(mockPost).toHaveBeenCalledWith('/api/generate/image', expect.anything());
+      expect(mockPost).toHaveBeenCalledWith(
+        "/api/generate/image",
+        expect.anything(),
+      );
       const body = mockPost.mock.calls[0]?.[1] as any;
-      expect(body.imageUrl).toBe('https://example.com/1.jpg');
-      expect(body.guideImageUrl).toBe('https://example.com/2.jpg');
+      expect(body.imageUrl).toBe("https://example.com/1.jpg");
+      expect(body.guideImageUrl).toBe("https://example.com/2.jpg");
     });
   });
 
-  describe('generateVideo', () => {
-    it('sends model instead of quality', async () => {
-      mockPost.mockResolvedValue({ data: { id: 'creation-123' } });
-      const client = new AmbienceAPIClient('test-token');
+  describe("generateVideo", () => {
+    it("sends model instead of quality", async () => {
+      mockPost.mockResolvedValue({ data: { id: "creation-123" } });
+      const client = new AmbienceAPIClient("test-token");
 
       await client.generateVideo({
-        prompt: 'a video',
-        aspectRatio: '16:9',
+        prompt: "a video",
+        aspectRatio: "16:9",
         duration: 10,
-        model: 'wan',
+        model: "wan",
       });
 
-      expect(mockPost).toHaveBeenCalledWith('/api/generate/video', {
-        prompt: 'a video',
-        aspectRatio: '16:9',
+      expect(mockPost).toHaveBeenCalledWith("/api/generate/video", {
+        prompt: "a video",
+        aspectRatio: "16:9",
         duration: 10,
-        model: 'wan',
+        model: "wan",
       });
     });
 
-    it('sends kling model for cinematic video', async () => {
-      mockPost.mockResolvedValue({ data: { id: 'creation-123' } });
-      const client = new AmbienceAPIClient('test-token');
+    it("sends kling model for cinematic video", async () => {
+      mockPost.mockResolvedValue({ data: { id: "creation-123" } });
+      const client = new AmbienceAPIClient("test-token");
 
       await client.generateVideo({
-        prompt: 'cinematic scene',
-        aspectRatio: '16:9',
+        prompt: "cinematic scene",
+        aspectRatio: "16:9",
         duration: 10,
-        model: 'kling',
+        model: "kling",
       });
 
       const body = mockPost.mock.calls[0]?.[1] as any;
-      expect(body.model).toBe('kling');
-      expect(body).not.toHaveProperty('quality');
+      expect(body.model).toBe("kling");
+      expect(body).not.toHaveProperty("quality");
     });
 
-    it('includes negativePrompt and preprocessImagePrompt', async () => {
-      mockPost.mockResolvedValue({ data: { id: 'creation-123' } });
-      const client = new AmbienceAPIClient('test-token');
+    it("includes negativePrompt and preprocessImagePrompt", async () => {
+      mockPost.mockResolvedValue({ data: { id: "creation-123" } });
+      const client = new AmbienceAPIClient("test-token");
 
       await client.generateVideo({
-        prompt: 'a video',
-        aspectRatio: '16:9',
+        prompt: "a video",
+        aspectRatio: "16:9",
         duration: 5,
-        model: 'wan',
-        negativePrompt: 'camera movement',
-        preprocessImagePrompt: 'a still frame',
+        model: "wan",
+        negativePrompt: "camera movement",
+        preprocessImagePrompt: "a still frame",
       });
 
       const body = mockPost.mock.calls[0]?.[1] as any;
-      expect(body.negativePrompt).toBe('camera movement');
-      expect(body.preprocessImagePrompt).toBe('a still frame');
+      expect(body.negativePrompt).toBe("camera movement");
+      expect(body.preprocessImagePrompt).toBe("a still frame");
     });
 
-    it('includes imageUrl for image-to-video', async () => {
-      mockPost.mockResolvedValue({ data: { id: 'creation-123' } });
-      const client = new AmbienceAPIClient('test-token');
+    it("includes imageUrl for image-to-video", async () => {
+      mockPost.mockResolvedValue({ data: { id: "creation-123" } });
+      const client = new AmbienceAPIClient("test-token");
 
       await client.generateVideo({
-        prompt: 'animate this',
-        aspectRatio: '16:9',
+        prompt: "animate this",
+        aspectRatio: "16:9",
         duration: 5,
-        model: 'kling',
-        imageUrl: 'https://example.com/source.jpg',
+        model: "kling",
+        imageUrl: "https://example.com/source.jpg",
       });
 
-      expect(mockPost).toHaveBeenCalledWith('/api/generate/video', expect.anything());
+      expect(mockPost).toHaveBeenCalledWith(
+        "/api/generate/video",
+        expect.anything(),
+      );
       const body = mockPost.mock.calls[0]?.[1] as any;
-      expect(body.imageUrl).toBe('https://example.com/source.jpg');
+      expect(body.imageUrl).toBe("https://example.com/source.jpg");
     });
   });
 
-  describe('generateMusic', () => {
-    it('sends required parameters with type music', async () => {
-      mockPost.mockResolvedValue({ data: { id: 'creation-123' } });
-      const client = new AmbienceAPIClient('test-token');
+  describe("generateMusic", () => {
+    it("sends required parameters with type music", async () => {
+      mockPost.mockResolvedValue({ data: { id: "creation-123" } });
+      const client = new AmbienceAPIClient("test-token");
 
-      await client.generateMusic({ prompt: 'upbeat electronic' });
+      await client.generateMusic({ prompt: "upbeat electronic" });
 
-      expect(mockPost).toHaveBeenCalledWith('/api/generate/audio', {
-        type: 'music',
-        prompt: 'upbeat electronic',
+      expect(mockPost).toHaveBeenCalledWith("/api/generate/audio", {
+        type: "music",
+        prompt: "upbeat electronic",
       });
     });
 
-    it('includes optional parameters', async () => {
-      mockPost.mockResolvedValue({ data: { id: 'creation-123' } });
-      const client = new AmbienceAPIClient('test-token');
+    it("includes optional parameters", async () => {
+      mockPost.mockResolvedValue({ data: { id: "creation-123" } });
+      const client = new AmbienceAPIClient("test-token");
 
       await client.generateMusic({
-        prompt: 'jazz ballad',
-        genre: 'jazz',
-        mood: 'relaxed',
-        lyrics: 'la la la',
+        prompt: "jazz ballad",
+        genre: "jazz",
+        mood: "relaxed",
+        lyrics: "la la la",
       });
 
-      expect(mockPost).toHaveBeenCalledWith('/api/generate/audio', {
-        type: 'music',
-        prompt: 'jazz ballad',
-        genre: 'jazz',
-        mood: 'relaxed',
-        lyrics: 'la la la',
+      expect(mockPost).toHaveBeenCalledWith("/api/generate/audio", {
+        type: "music",
+        prompt: "jazz ballad",
+        genre: "jazz",
+        mood: "relaxed",
+        lyrics: "la la la",
       });
     });
   });
 
-  describe('generateSpeech', () => {
-    it('sends required parameters with type speech', async () => {
-      mockPost.mockResolvedValue({ data: { id: 'creation-123' } });
-      const client = new AmbienceAPIClient('test-token');
+  describe("generateSpeech", () => {
+    it("sends required parameters with type speech", async () => {
+      mockPost.mockResolvedValue({ data: { id: "creation-123" } });
+      const client = new AmbienceAPIClient("test-token");
 
       await client.generateSpeech({
-        text: 'Hello world',
-        voice: 'af_heart',
-        language: 'american-english',
+        text: "Hello world",
+        voice: "af_heart",
+        language: "american-english",
       });
 
-      expect(mockPost).toHaveBeenCalledWith('/api/generate/audio', {
-        type: 'speech',
-        text: 'Hello world',
-        voice: 'af_heart',
-        language: 'american-english',
+      expect(mockPost).toHaveBeenCalledWith("/api/generate/audio", {
+        type: "speech",
+        text: "Hello world",
+        voice: "af_heart",
+        language: "american-english",
       });
     });
 
-    it('includes speed when provided', async () => {
-      mockPost.mockResolvedValue({ data: { id: 'creation-123' } });
-      const client = new AmbienceAPIClient('test-token');
+    it("includes speed when provided", async () => {
+      mockPost.mockResolvedValue({ data: { id: "creation-123" } });
+      const client = new AmbienceAPIClient("test-token");
 
       await client.generateSpeech({
-        text: 'Fast talking',
-        voice: 'af_heart',
-        language: 'american-english',
+        text: "Fast talking",
+        voice: "af_heart",
+        language: "american-english",
         speed: 1.5,
       });
 
-      expect(mockPost).toHaveBeenCalledWith('/api/generate/audio', expect.anything());
+      expect(mockPost).toHaveBeenCalledWith(
+        "/api/generate/audio",
+        expect.anything(),
+      );
       const body = mockPost.mock.calls[0]?.[1] as any;
       expect(body.speed).toBe(1.5);
     });
   });
 
-  describe('generateAudio (legacy)', () => {
-    it('sends speech request', async () => {
-      mockPost.mockResolvedValue({ data: { id: 'creation-123' } });
-      const client = new AmbienceAPIClient('test-token');
+  describe("generateAudio (legacy)", () => {
+    it("sends speech request", async () => {
+      mockPost.mockResolvedValue({ data: { id: "creation-123" } });
+      const client = new AmbienceAPIClient("test-token");
 
       await client.generateAudio({
-        prompt: 'Hello',
-        type: 'speech',
-        voice: 'af_heart',
-        language: 'american-english',
+        prompt: "Hello",
+        type: "speech",
+        voice: "af_heart",
+        language: "american-english",
       });
 
-      expect(mockPost).toHaveBeenCalledWith('/api/generate/audio', {
-        type: 'speech',
-        prompt: 'Hello',
-        voice: 'af_heart',
-        language: 'american-english',
+      expect(mockPost).toHaveBeenCalledWith("/api/generate/audio", {
+        type: "speech",
+        prompt: "Hello",
+        voice: "af_heart",
+        language: "american-english",
       });
     });
 
-    it('sends music request', async () => {
-      mockPost.mockResolvedValue({ data: { id: 'creation-123' } });
-      const client = new AmbienceAPIClient('test-token');
+    it("sends music request", async () => {
+      mockPost.mockResolvedValue({ data: { id: "creation-123" } });
+      const client = new AmbienceAPIClient("test-token");
 
       await client.generateAudio({
-        prompt: 'Rock music',
-        type: 'music',
+        prompt: "Rock music",
+        type: "music",
       });
 
-      expect(mockPost).toHaveBeenCalledWith('/api/generate/audio', {
-        type: 'music',
-        prompt: 'Rock music',
+      expect(mockPost).toHaveBeenCalledWith("/api/generate/audio", {
+        type: "music",
+        prompt: "Rock music",
       });
     });
   });
 
-  describe('generateUpscale', () => {
-    it('sends required parameters', async () => {
-      mockPost.mockResolvedValue({ data: { id: 'creation-123' } });
-      const client = new AmbienceAPIClient('test-token');
+  describe("generateUpscale", () => {
+    it("sends required parameters", async () => {
+      mockPost.mockResolvedValue({ data: { id: "creation-123" } });
+      const client = new AmbienceAPIClient("test-token");
 
       await client.generateUpscale({
-        imageUrl: 'https://example.com/image.jpg',
+        imageUrl: "https://example.com/image.jpg",
         upscaleFactor: 2,
       });
 
-      expect(mockPost).toHaveBeenCalledWith('/api/generate/upscale', {
-        imageUrl: 'https://example.com/image.jpg',
+      expect(mockPost).toHaveBeenCalledWith("/api/generate/upscale", {
+        imageUrl: "https://example.com/image.jpg",
         upscaleFactor: 2,
       });
     });
 
-    it('includes originalPrompt when provided', async () => {
-      mockPost.mockResolvedValue({ data: { id: 'creation-123' } });
-      const client = new AmbienceAPIClient('test-token');
+    it("includes originalPrompt when provided", async () => {
+      mockPost.mockResolvedValue({ data: { id: "creation-123" } });
+      const client = new AmbienceAPIClient("test-token");
 
       await client.generateUpscale({
-        imageUrl: 'https://example.com/image.jpg',
+        imageUrl: "https://example.com/image.jpg",
         upscaleFactor: 4,
-        originalPrompt: 'a cat',
+        originalPrompt: "a cat",
       });
 
       const body = mockPost.mock.calls[0]?.[1] as any;
-      expect(body.originalPrompt).toBe('a cat');
+      expect(body.originalPrompt).toBe("a cat");
       expect(body.upscaleFactor).toBe(4);
     });
   });
 
-  describe('transcribeAudio', () => {
-    it('sends audioUrl', async () => {
-      mockPost.mockResolvedValue({ data: { id: 'creation-123' } });
-      const client = new AmbienceAPIClient('test-token');
+  describe("transcribeAudio", () => {
+    it("sends audioUrl", async () => {
+      mockPost.mockResolvedValue({ data: { id: "creation-123" } });
+      const client = new AmbienceAPIClient("test-token");
 
       await client.transcribeAudio({
-        audioUrl: 'https://example.com/audio.mp3',
+        audioUrl: "https://example.com/audio.mp3",
       });
 
-      expect(mockPost).toHaveBeenCalledWith('/api/generate/transcription', {
-        audioUrl: 'https://example.com/audio.mp3',
+      expect(mockPost).toHaveBeenCalledWith("/api/generate/transcription", {
+        audioUrl: "https://example.com/audio.mp3",
       });
     });
   });
 
-  describe('getLibrary', () => {
-    it('extracts creations from response', async () => {
+  describe("getLibrary", () => {
+    it("extracts creations from response", async () => {
       const mockCreations = [
-        { id: '1', prompt: 'test', status: 'completed' },
-        { id: '2', prompt: 'test2', status: 'pending' },
+        { id: "1", prompt: "test", status: "completed" },
+        { id: "2", prompt: "test2", status: "pending" },
       ];
       mockGet.mockResolvedValue({
         data: { creations: mockCreations, total: 2 },
       });
-      const client = new AmbienceAPIClient('test-token');
+      const client = new AmbienceAPIClient("test-token");
 
       const result = await client.getLibrary({ limit: 10, offset: 0 });
 
       expect(result.success).toBe(true);
       expect(result.data).toEqual(mockCreations);
-      expect(mockGet).toHaveBeenCalledWith('/api/library', {
-        params: { limit: 10, type: 'all' },
+      expect(mockGet).toHaveBeenCalledWith("/api/library", {
+        params: { limit: 10, type: "all" },
       });
     });
   });
 
-  describe('getCreationStatus', () => {
-    it('fetches creation by ID', async () => {
+  describe("getCreationStatus", () => {
+    it("fetches creation by ID", async () => {
       mockGet.mockResolvedValue({
-        data: { id: 'creation-123', status: 'completed', url: 'https://cdn.example.com/image.png' },
+        data: {
+          id: "creation-123",
+          status: "completed",
+          url: "https://cdn.example.com/image.png",
+        },
       });
-      const client = new AmbienceAPIClient('test-token');
+      const client = new AmbienceAPIClient("test-token");
 
-      const result = await client.getCreationStatus('creation-123');
+      const result = await client.getCreationStatus("creation-123");
 
       expect(result.success).toBe(true);
-      expect(result.data?.id).toBe('creation-123');
-      expect(mockGet).toHaveBeenCalledWith('/api/creations/creation-123/status');
+      expect(result.data?.id).toBe("creation-123");
+      expect(mockGet).toHaveBeenCalledWith(
+        "/api/creations/creation-123/status",
+      );
     });
   });
 
-  describe('uploadFile', () => {
-    it('sends data URL to /api/mcp/upload', async () => {
-      mockPost.mockResolvedValue({ data: { url: 'https://cdn.example.com/file.png' } });
-      const client = new AmbienceAPIClient('test-token');
+  describe("uploadFile", () => {
+    it("sends data URL to /api/mcp/upload", async () => {
+      mockPost.mockResolvedValue({
+        data: { url: "https://cdn.example.com/file.png" },
+      });
+      const client = new AmbienceAPIClient("test-token");
 
-      const result = await client.uploadFile('data:image/png;base64,abc123');
+      const result = await client.uploadFile("data:image/png;base64,abc123");
 
-      expect(mockPost).toHaveBeenCalledWith('/api/mcp/upload', { imageData: 'data:image/png;base64,abc123' });
-      expect(result).toBe('https://cdn.example.com/file.png');
+      expect(mockPost).toHaveBeenCalledWith("/api/mcp/upload", {
+        imageData: "data:image/png;base64,abc123",
+      });
+      expect(result).toBe("https://cdn.example.com/file.png");
     });
   });
 
-  describe('getModels', () => {
+  describe("getModels", () => {
     beforeEach(() => {
-      // Reset module-level cache by importing fresh or setting expiry to 0
-      // The cache is module-level, so we clear mocks and rely on timing
       mockAxiosGet.mockReset();
+      clearModelCache();
     });
 
-    it('fetches models from /api/models', async () => {
+    it("fetches models from /api/models", async () => {
       const mockModels = [
-        { uiValue: 'flux_2_pro', id: 'flux-2-pro', displayName: 'Flux 2 Pro', description: 'Fast', mediaCategory: 'image', tier: 'standard', tasks: [{ task: 'text_to_image', creditCost: 25, estimatedDuration: 30, durationDisplay: '~30 seconds' }] },
+        {
+          uiValue: "flux_2_pro",
+          id: "flux-2-pro",
+          displayName: "Flux 2 Pro",
+          description: "Fast",
+          mediaCategory: "image",
+          tier: "standard",
+          tasks: [
+            {
+              task: "text_to_image",
+              creditCost: 25,
+              estimatedDuration: 30,
+              durationDisplay: "~30 seconds",
+            },
+          ],
+        },
       ];
       mockAxiosGet.mockResolvedValue({ data: { models: mockModels } });
-      const client = new AmbienceAPIClient('test-token');
+      const client = new AmbienceAPIClient("test-token");
 
       const result = await client.getModels();
 
       expect(result).toEqual(mockModels);
       expect(mockAxiosGet).toHaveBeenCalledWith(
-        expect.stringContaining('/api/models'),
+        expect.stringContaining("/api/models"),
         expect.objectContaining({ timeout: 5000 }),
       );
     });
 
-    it('returns cached results on subsequent calls', async () => {
-      // The first test already populates the module-level cache, so
-      // calling getModels again should NOT trigger a new fetch
-      const client = new AmbienceAPIClient('test-token');
+    it("returns cached results on subsequent calls", async () => {
+      mockAxiosGet.mockResolvedValue({ data: { models: [] } });
+      const client = new AmbienceAPIClient("test-token");
 
-      const result = await client.getModels();
+      await client.getModels();
+      await client.getModels();
 
-      // Cache was populated by the previous test — no new fetch
-      expect(mockAxiosGet).not.toHaveBeenCalled();
-      expect(Array.isArray(result)).toBe(true);
-      expect(result.length).toBeGreaterThan(0);
+      expect(mockAxiosGet).toHaveBeenCalledTimes(1);
     });
 
-    it('returns empty array on network error with no cache', async () => {
-      jest.spyOn(console, 'error').mockImplementation(() => {});
-      mockAxiosGet.mockRejectedValue(new Error('Network Error'));
+    it("parses the defaults map from /api/models", async () => {
+      mockAxiosGet.mockResolvedValue({
+        data: {
+          models: [],
+          defaults: { text_to_image: "nano_banana", text_to_video: "wan" },
+        },
+      });
+      const client = new AmbienceAPIClient("test-token");
+
+      const defaults = await client.getModelDefaults();
+
+      expect(defaults).toEqual({
+        text_to_image: "nano_banana",
+        text_to_video: "wan",
+      });
+    });
+
+    it("returns an empty defaults map when the API omits defaults (older versions)", async () => {
+      mockAxiosGet.mockResolvedValue({ data: { models: [] } });
+      const client = new AmbienceAPIClient("test-token");
+
+      const defaults = await client.getModelDefaults();
+
+      expect(defaults).toEqual({});
+    });
+
+    it("returns empty array on network error with no cache", async () => {
+      jest.spyOn(console, "error").mockImplementation(() => {});
+      mockAxiosGet.mockRejectedValue(new Error("Network Error"));
       // Force cache miss by creating fresh module state
-      const client = new AmbienceAPIClient('test-token');
+      const client = new AmbienceAPIClient("test-token");
 
       const result = await client.getModels();
 
@@ -522,155 +607,202 @@ describe('AmbienceAPIClient', () => {
     });
   });
 
-  describe('error handling', () => {
+  describe("error handling", () => {
     let consoleErrorSpy: jest.SpiedFunction<typeof console.error>;
 
     beforeEach(() => {
-      consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      consoleErrorSpy = jest
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
     });
 
     afterEach(() => {
       consoleErrorSpy.mockRestore();
     });
 
-    it('prefers error_description over error code', async () => {
+    it("prefers error_description over error code", async () => {
       const axiosError = {
         isAxiosError: true,
-        response: { status: 401, data: { error: 'unauthorized', error_description: 'Authentication required' } },
-        message: 'Request failed',
-        config: { url: '/api/generate/image' },
+        response: {
+          status: 401,
+          data: {
+            error: "unauthorized",
+            error_description: "Authentication required",
+          },
+        },
+        message: "Request failed",
+        config: { url: "/api/generate/image" },
       };
       mockPost.mockRejectedValue(axiosError);
-      const client = new AmbienceAPIClient('test-token');
+      const client = new AmbienceAPIClient("test-token");
 
       const result = await client.generateImage({
-        prompt: 'test',
-        aspectRatio: '16:9',
-        model: 'flux',
+        prompt: "test",
+        aspectRatio: "16:9",
+        model: "flux",
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Authentication required');
+      expect(result.error).toContain("Authentication required");
+      expect(result.error).toContain(
+        "https://www.ambienceai.com/guides/connect-claude-mcp",
+      );
     });
 
-    it('falls back to error code when no error_description or message', async () => {
+    it("appends paid-plan signup guidance on subscription_required errors", async () => {
       const axiosError = {
         isAxiosError: true,
-        response: { status: 400, data: { error: 'Invalid prompt' } },
-        message: 'Request failed',
-        config: { url: '/api/generate/image' },
+        response: {
+          status: 403,
+          data: {
+            error: "subscription_required",
+            error_description:
+              "A Premium, Team, or Business plan is required for MCP access.",
+          },
+        },
+        message: "Request failed with status code 403",
+        config: { url: "/api/generate/image" },
       };
       mockPost.mockRejectedValue(axiosError);
-      const client = new AmbienceAPIClient('test-token');
+      const client = new AmbienceAPIClient("test-token");
 
       const result = await client.generateImage({
-        prompt: 'test',
-        aspectRatio: '16:9',
-        model: 'flux',
+        prompt: "test",
+        aspectRatio: "16:9",
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Invalid prompt');
+      expect(result.error).toContain(
+        "A Premium, Team, or Business plan is required",
+      );
+      expect(result.error).toContain("Premium, Team, or Business");
+      expect(result.error).toContain("https://www.ambienceai.com/pricing");
     });
 
-    it('falls back to response.data.message', async () => {
+    it("falls back to error code when no error_description or message", async () => {
       const axiosError = {
         isAxiosError: true,
-        response: { status: 429, data: { message: 'Rate limited' } },
-        message: 'Request failed',
-        config: { url: '/api/generate/image' },
+        response: { status: 400, data: { error: "Invalid prompt" } },
+        message: "Request failed",
+        config: { url: "/api/generate/image" },
       };
       mockPost.mockRejectedValue(axiosError);
-      const client = new AmbienceAPIClient('test-token');
+      const client = new AmbienceAPIClient("test-token");
 
       const result = await client.generateImage({
-        prompt: 'test',
-        aspectRatio: '16:9',
-        model: 'flux',
+        prompt: "test",
+        aspectRatio: "16:9",
+        model: "flux",
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Rate limited');
+      expect(result.error).toBe("Invalid prompt");
     });
 
-    it('falls back to error.message when response data is empty', async () => {
+    it("falls back to response.data.message", async () => {
+      const axiosError = {
+        isAxiosError: true,
+        response: { status: 429, data: { message: "Rate limited" } },
+        message: "Request failed",
+        config: { url: "/api/generate/image" },
+      };
+      mockPost.mockRejectedValue(axiosError);
+      const client = new AmbienceAPIClient("test-token");
+
+      const result = await client.generateImage({
+        prompt: "test",
+        aspectRatio: "16:9",
+        model: "flux",
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Rate limited");
+    });
+
+    it("falls back to error.message when response data is empty", async () => {
       const axiosError = {
         isAxiosError: true,
         response: { status: 500, data: {} },
-        message: 'Network Error',
-        config: { url: '/api/generate/image' },
+        message: "Network Error",
+        config: { url: "/api/generate/image" },
       };
       mockPost.mockRejectedValue(axiosError);
-      const client = new AmbienceAPIClient('test-token');
+      const client = new AmbienceAPIClient("test-token");
 
       const result = await client.generateImage({
-        prompt: 'test',
-        aspectRatio: '16:9',
-        model: 'flux',
+        prompt: "test",
+        aspectRatio: "16:9",
+        model: "flux",
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Network Error');
+      expect(result.error).toBe("Network Error");
     });
 
-    it('logs diagnostic info to stderr for axios errors', async () => {
+    it("logs diagnostic info to stderr for axios errors", async () => {
       const axiosError = {
         isAxiosError: true,
-        response: { status: 403, data: { error: 'forbidden', error_description: 'Insufficient credits' } },
-        message: 'Request failed with status code 403',
-        config: { url: '/api/generate/image' },
+        response: {
+          status: 403,
+          data: {
+            error: "forbidden",
+            error_description: "Insufficient credits",
+          },
+        },
+        message: "Request failed with status code 403",
+        config: { url: "/api/generate/image" },
       };
       mockPost.mockRejectedValue(axiosError);
-      const client = new AmbienceAPIClient('test-token');
+      const client = new AmbienceAPIClient("test-token");
 
       await client.generateImage({
-        prompt: 'test',
-        aspectRatio: '16:9',
-        model: 'flux',
+        prompt: "test",
+        aspectRatio: "16:9",
+        model: "flux",
       });
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        '[MCP API Client] Request failed:',
+        "[MCP API Client] Request failed:",
         expect.objectContaining({
           status: 403,
-          error: 'forbidden',
-          description: 'Insufficient credits',
-          url: '/api/generate/image',
+          error: "forbidden",
+          description: "Insufficient credits",
+          url: "/api/generate/image",
         }),
       );
     });
 
-    it('handles non-axios errors and logs them', async () => {
-      const genericError = new Error('Something went wrong');
+    it("handles non-axios errors and logs them", async () => {
+      const genericError = new Error("Something went wrong");
       mockPost.mockRejectedValue(genericError);
-      const client = new AmbienceAPIClient('test-token');
+      const client = new AmbienceAPIClient("test-token");
 
       const result = await client.generateImage({
-        prompt: 'test',
-        aspectRatio: '16:9',
-        model: 'flux',
+        prompt: "test",
+        aspectRatio: "16:9",
+        model: "flux",
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Something went wrong');
+      expect(result.error).toBe("Something went wrong");
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        '[MCP API Client] Non-HTTP error:',
+        "[MCP API Client] Non-HTTP error:",
         genericError,
       );
     });
 
-    it('returns unknown error for null/undefined', async () => {
+    it("returns unknown error for null/undefined", async () => {
       mockPost.mockRejectedValue(null);
-      const client = new AmbienceAPIClient('test-token');
+      const client = new AmbienceAPIClient("test-token");
 
       const result = await client.generateImage({
-        prompt: 'test',
-        aspectRatio: '16:9',
-        model: 'flux',
+        prompt: "test",
+        aspectRatio: "16:9",
+        model: "flux",
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('An unknown error occurred');
+      expect(result.error).toBe("An unknown error occurred");
     });
   });
 });
