@@ -131,11 +131,10 @@ process.on("SIGTERM", () => {
   process.exit(0);
 });
 
-// Start the server
-if (import.meta.url === `file://${process.argv[1]}`) {
-  const server = new AmbienceAIMCPServer();
-  server.start().catch((error) => {
-    console.error("Failed to start server:", error);
-    process.exit(1);
-  });
-}
+// Bin entry point: start unconditionally. An import.meta.url guard here
+// breaks symlinked launches (npx runs the bin through a symlink).
+const server = new AmbienceAIMCPServer();
+server.start().catch((error) => {
+  console.error("Failed to start server:", error);
+  process.exit(1);
+});
