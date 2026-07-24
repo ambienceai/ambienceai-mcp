@@ -62,6 +62,7 @@ For a full walkthrough with screenshots, see the [setup guide](https://www.ambie
 | `generate_video`       | Create a video from a text prompt                                                           |
 | `generate_music`       | Create instrumental tracks, songs with lyrics, or ambient soundscapes                       |
 | `generate_speech`      | Convert written text into natural-sounding speech                                           |
+| `generate_chart`       | Create a bar, line, pie, or KPI counter chart from data, as an image or animated video      |
 | `generate_audio`       | Legacy speech and music tool (use `generate_music` or `generate_speech` for better control) |
 | `transcribe_audio`     | Convert speech to text, subtitles, or captions                                              |
 | `upscale_image`        | Increase image resolution up to 4x while preserving quality                                 |

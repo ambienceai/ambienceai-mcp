@@ -9,6 +9,7 @@ import type {
   GenerateMusicRequest,
   GenerateSpeechRequest,
   GenerateAudioRequest,
+  GenerateChartRequest,
   UpscaleImageRequest,
   TranscribeAudioRequest,
   LibraryRequest,
@@ -35,12 +36,22 @@ export interface ModelInfo {
   tasks: ModelTaskInfo[];
 }
 
+/** A generator from GET /api/models `generators` (e.g. charts). */
+export interface GeneratorInfo {
+  key: string;
+  mediaCategory: string;
+  creditCost: number;
+  estimatedDuration: number;
+  durationDisplay: string;
+}
+
 /** Per-task default model uiValues, as served by GET /api/models `defaults`. */
 export type ModelDefaults = Record<string, string>;
 
 // Module-level cache for models (5-minute TTL to match API Cache-Control)
 let modelsCache: ModelInfo[] | null = null;
 let modelDefaultsCache: ModelDefaults | null = null;
+let generatorsCache: GeneratorInfo[] | null = null;
 let modelsCacheExpiry = 0;
 const MODELS_CACHE_TTL_MS = 5 * 60 * 1000;
 
@@ -48,6 +59,7 @@ const MODELS_CACHE_TTL_MS = 5 * 60 * 1000;
 export function clearModelCache(): void {
   modelsCache = null;
   modelDefaultsCache = null;
+  generatorsCache = null;
   modelsCacheExpiry = 0;
 }
 
@@ -157,7 +169,7 @@ export class AmbienceAPIClient {
   }
 
   /**
-   * Generate a video  
+   * Generate a video
    */
   async generateVideo(
     request: GenerateVideoRequest,
@@ -236,6 +248,39 @@ export class AmbienceAPIClient {
 
       const response = await this.client.post(
         "/api/generate/audio",
+        requestBody,
+      );
+
+      return { success: true, data: response.data as Creation };
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  /** Generate a chart (static image or animated video). */
+  async generateChart(
+    request: GenerateChartRequest,
+  ): Promise<ApiResponse<Creation>> {
+    try {
+      const requestBody: any = {
+        chartType: request.chartType,
+        title: request.title,
+      };
+
+      if (request.format) requestBody.format = request.format;
+      if (request.data) requestBody.data = request.data;
+      if (request.value !== undefined) requestBody.value = request.value;
+      if (request.subtitle) requestBody.subtitle = request.subtitle;
+      if (request.caption) requestBody.caption = request.caption;
+      if (request.valuePrefix) requestBody.valuePrefix = request.valuePrefix;
+      if (request.valueSuffix) requestBody.valueSuffix = request.valueSuffix;
+      if (request.aspectRatio) requestBody.aspectRatio = request.aspectRatio;
+      if (request.accentColor) requestBody.accentColor = request.accentColor;
+      if (request.backgroundColor)
+        requestBody.backgroundColor = request.backgroundColor;
+
+      const response = await this.client.post(
+        "/api/generate/chart",
         requestBody,
       );
 
@@ -377,6 +422,15 @@ export class AmbienceAPIClient {
     return modelDefaultsCache ?? {};
   }
 
+  /**
+   * Get generators (e.g. charts) from /api/models `generators`. Empty when the
+   * backend doesn't serve the key, so callers fall back to generic descriptions.
+   */
+  async getGenerators(): Promise<GeneratorInfo[]> {
+    await this.fetchModelData();
+    return generatorsCache ?? [];
+  }
+
   private async fetchModelData(): Promise<void> {
     if (modelsCache && Date.now() < modelsCacheExpiry) {
       return;
@@ -390,9 +444,11 @@ export class AmbienceAPIClient {
       const data = response.data as {
         models: ModelInfo[];
         defaults?: ModelDefaults;
+        generators?: GeneratorInfo[];
       };
       modelsCache = data.models;
       modelDefaultsCache = data.defaults ?? null;
+      generatorsCache = data.generators ?? null;
       modelsCacheExpiry = Date.now() + MODELS_CACHE_TTL_MS;
     } catch (error) {
       console.error(

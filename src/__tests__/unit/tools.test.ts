@@ -3,8 +3,38 @@ import {
   getModelsForTasks,
   buildModelDescription,
   buildToolCostDescription,
+  buildChartCostDescription,
 } from "../../tools.js";
-import type { ModelInfo } from "../../api-client.js";
+import type { ModelInfo, GeneratorInfo } from "../../api-client.js";
+
+describe("buildChartCostDescription", () => {
+  const generators: GeneratorInfo[] = [
+    {
+      key: "chart_image",
+      mediaCategory: "image",
+      creditCost: 7,
+      estimatedDuration: 10,
+      durationDisplay: "~10 seconds",
+    },
+    {
+      key: "chart_video",
+      mediaCategory: "video",
+      creditCost: 9,
+      estimatedDuration: 25,
+      durationDisplay: "~25 seconds",
+    },
+  ];
+
+  it("builds a static + animated cost string from the server generators", () => {
+    expect(buildChartCostDescription(generators)).toBe(
+      " (7 credits static, 9 credits animated)",
+    );
+  });
+
+  it("returns empty when generators are absent (older backend)", () => {
+    expect(buildChartCostDescription([])).toBe("");
+  });
+});
 
 // Test the file path detection helpers (exported via the module)
 // We test these indirectly through the schema + tool behavior
