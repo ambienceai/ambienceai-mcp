@@ -379,6 +379,61 @@ describe("AmbienceAPIClient", () => {
     });
   });
 
+  describe("generateChart", () => {
+    it("sends chartType and title, leaving format to the server default", async () => {
+      mockPost.mockResolvedValue({
+        data: { id: "creation-123", status: "pending" },
+      });
+      const client = new AmbienceAPIClient("test-token");
+
+      await client.generateChart({
+        chartType: "bar",
+        title: "Revenue",
+        data: [{ label: "Q1", value: 10 }],
+      });
+
+      expect(mockPost).toHaveBeenCalledWith("/api/generate/chart", {
+        chartType: "bar",
+        title: "Revenue",
+        data: [{ label: "Q1", value: 10 }],
+      });
+    });
+
+    it("includes format and optional fields when provided", async () => {
+      mockPost.mockResolvedValue({ data: { id: "creation-123" } });
+      const client = new AmbienceAPIClient("test-token");
+
+      await client.generateChart({
+        chartType: "counter",
+        title: "ARR",
+        format: "video",
+        value: 128400,
+        valuePrefix: "$",
+        caption: "Up 34%",
+        aspectRatio: "1:1",
+      });
+
+      const body = mockPost.mock.calls[0]?.[1] as any;
+      expect(body.format).toBe("video");
+      expect(body.value).toBe(128400);
+      expect(body.valuePrefix).toBe("$");
+      expect(body.caption).toBe("Up 34%");
+      expect(body.aspectRatio).toBe("1:1");
+    });
+
+    it("omits absent optional fields", async () => {
+      mockPost.mockResolvedValue({ data: { id: "creation-123" } });
+      const client = new AmbienceAPIClient("test-token");
+
+      await client.generateChart({ chartType: "bar", title: "x" });
+
+      const body = mockPost.mock.calls[0]?.[1] as any;
+      expect(body).not.toHaveProperty("format");
+      expect(body).not.toHaveProperty("data");
+      expect(body).not.toHaveProperty("accentColor");
+    });
+  });
+
   describe("generateAudio (legacy)", () => {
     it("sends speech request", async () => {
       mockPost.mockResolvedValue({ data: { id: "creation-123" } });
@@ -591,6 +646,29 @@ describe("AmbienceAPIClient", () => {
       const defaults = await client.getModelDefaults();
 
       expect(defaults).toEqual({});
+    });
+
+    it("parses the generators array from /api/models", async () => {
+      const generators = [
+        {
+          key: "chart_image",
+          mediaCategory: "image",
+          creditCost: 7,
+          estimatedDuration: 10,
+          durationDisplay: "~10 seconds",
+        },
+      ];
+      mockAxiosGet.mockResolvedValue({ data: { models: [], generators } });
+      const client = new AmbienceAPIClient("test-token");
+
+      expect(await client.getGenerators()).toEqual(generators);
+    });
+
+    it("returns an empty generators array when the API omits the key", async () => {
+      mockAxiosGet.mockResolvedValue({ data: { models: [] } });
+      const client = new AmbienceAPIClient("test-token");
+
+      expect(await client.getGenerators()).toEqual([]);
     });
 
     it("returns empty array on network error with no cache", async () => {

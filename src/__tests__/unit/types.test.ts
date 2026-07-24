@@ -7,10 +7,54 @@ import {
   GenerateMusicRequestSchema,
   GenerateSpeechRequestSchema,
   GenerateAudioRequestSchema,
+  GenerateChartRequestSchema,
   UpscaleImageRequestSchema,
   TranscribeAudioRequestSchema,
   LibraryRequestSchema,
 } from "../../types.js";
+
+describe("GenerateChartRequestSchema", () => {
+  it("parses a minimal bar chart", () => {
+    const result = GenerateChartRequestSchema.parse({
+      chartType: "bar",
+      title: "Revenue",
+      data: [{ label: "Q1", value: 10 }],
+    });
+    expect(result.chartType).toBe("bar");
+    expect(result.title).toBe("Revenue");
+  });
+
+  it("requires chartType and title", () => {
+    expect(() => GenerateChartRequestSchema.parse({ title: "x" })).toThrow();
+    expect(() =>
+      GenerateChartRequestSchema.parse({ chartType: "bar" }),
+    ).toThrow();
+  });
+
+  it("rejects an unknown chartType and a non-numeric value", () => {
+    expect(() =>
+      GenerateChartRequestSchema.parse({ chartType: "scatter", title: "x" }),
+    ).toThrow();
+    expect(() =>
+      GenerateChartRequestSchema.parse({
+        chartType: "counter",
+        title: "x",
+        value: "lots",
+      }),
+    ).toThrow();
+  });
+
+  it("accepts format and a counter value", () => {
+    const result = GenerateChartRequestSchema.parse({
+      chartType: "counter",
+      title: "ARR",
+      format: "video",
+      value: 128400,
+    });
+    expect(result.format).toBe("video");
+    expect(result.value).toBe(128400);
+  });
+});
 
 describe("CreditsResponseSchema", () => {
   it("parses valid credits response", () => {

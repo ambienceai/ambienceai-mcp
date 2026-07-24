@@ -1,4 +1,4 @@
-import type { ModelInfo } from "./api-client.js";
+import type { ModelInfo, GeneratorInfo } from "./api-client.js";
 
 /**
  * Canonical generation-type string literals returned by the backend's
@@ -47,6 +47,7 @@ type CreationInfo =
 export function getCompletionTimeInfo(
   creation: CreationInfo,
   models: ModelInfo[],
+  generators: GeneratorInfo[] = [],
 ): {
   expectedDuration: number;
   displayTime: string;
@@ -58,7 +59,14 @@ export function getCompletionTimeInfo(
   let duration = FALLBACK_DURATION_SECONDS;
   let displayTime = FALLBACK_DISPLAY_TIME;
 
-  if (task && models.length > 0) {
+  // Generators (e.g. charts) resolve by generationType key.
+  const generator = task ? generators.find((g) => g.key === task) : undefined;
+  if (generator) {
+    duration = generator.estimatedDuration;
+    displayTime = generator.durationDisplay;
+  }
+
+  if (!generator && task && models.length > 0) {
     // 1. Exact (model, task) match.
     if (modelId) {
       const matchedModel = models.find((m) => m.id === modelId);

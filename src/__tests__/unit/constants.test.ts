@@ -1,5 +1,5 @@
 import { GENERATION_TYPES, getCompletionTimeInfo } from "../../constants.js";
-import type { ModelInfo } from "../../api-client.js";
+import type { ModelInfo, GeneratorInfo } from "../../api-client.js";
 
 // Fixture that mirrors the shape of GET /api/models. Keep it small but
 // exercise the paths the resolver cares about: multiple models sharing a
@@ -109,6 +109,37 @@ describe("GENERATION_TYPES", () => {
 });
 
 describe("getCompletionTimeInfo", () => {
+  describe("generator resolution", () => {
+    const generators: GeneratorInfo[] = [
+      {
+        key: "chart_image",
+        mediaCategory: "image",
+        creditCost: 7,
+        estimatedDuration: 10,
+        durationDisplay: "~10 seconds",
+      },
+    ];
+
+    it("resolves duration from a generator by generationType", () => {
+      const result = getCompletionTimeInfo(
+        { generationType: "chart_image" },
+        [],
+        generators,
+      );
+      expect(result.expectedDuration).toBe(10);
+      expect(result.displayTime).toBe("~10 seconds");
+    });
+
+    it("falls back to the generic estimate for an unknown generationType", () => {
+      const result = getCompletionTimeInfo(
+        { generationType: "chart_video" },
+        [],
+        generators,
+      );
+      expect(result.displayTime).toBe("~1 minute");
+    });
+  });
+
   describe("exact (model, task) match", () => {
     it("returns the authoritative duration for a specific model", () => {
       const result = getCompletionTimeInfo(

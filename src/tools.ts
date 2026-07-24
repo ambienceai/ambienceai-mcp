@@ -1,7 +1,11 @@
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { readFile } from "node:fs/promises";
 import { extname } from "node:path";
-import { AmbienceAPIClient, type ModelInfo } from "./api-client.js";
+import {
+  AmbienceAPIClient,
+  type ModelInfo,
+  type GeneratorInfo,
+} from "./api-client.js";
 import {
   GenerateImageRequestSchema,
   GenerateImageMultiRequestSchema,
@@ -9,6 +13,7 @@ import {
   GenerateMusicRequestSchema,
   GenerateSpeechRequestSchema,
   GenerateAudioRequestSchema,
+  GenerateChartRequestSchema,
   UpscaleImageRequestSchema,
   TranscribeAudioRequestSchema,
   LibraryRequestSchema,
@@ -167,6 +172,16 @@ export function buildModelDescription(
   return desc;
 }
 
+/** Build the chart cost string from the server's generators. */
+export function buildChartCostDescription(generators: GeneratorInfo[]): string {
+  const image = generators.find((g) => g.key === "chart_image");
+  const video = generators.find((g) => g.key === "chart_video");
+  const parts: string[] = [];
+  if (image) parts.push(`${image.creditCost} credits static`);
+  if (video) parts.push(`${video.creditCost} credits animated`);
+  return parts.length > 0 ? ` (${parts.join(", ")})` : "";
+}
+
 /** Build cost string for single-model tools, e.g. " (40 credits)" */
 export function buildToolCostDescription(
   models: ModelInfo[],
@@ -230,9 +245,11 @@ export class AmbienceAITools {
   async getTools(): Promise<Tool[]> {
     let models: ModelInfo[] = [];
     let defaults: Record<string, string> = {};
+    let generators: GeneratorInfo[] = [];
     try {
       models = await this.apiClient.getModels();
       defaults = await this.apiClient.getModelDefaults();
+      generators = await this.apiClient.getGenerators();
     } catch {
       // Fall back to empty — descriptions will omit cost and default info
     }
@@ -283,6 +300,7 @@ export class AmbienceAITools {
       models,
       "audio_transcription",
     );
+    const chartCostStr = buildChartCostDescription(generators);
 
     return [
       {
@@ -577,6 +595,79 @@ export class AmbienceAITools {
         },
       },
       {
+        name: "generate_chart",
+        description: `Generate a chart from structured data${chartCostStr}. Supports bar, line, pie, and KPI counter charts, as a static image (default) or an animated video. Use this instead of the image or video generators for anything data-driven.`,
+        inputSchema: {
+          type: "object",
+          properties: {
+            chartType: {
+              type: "string",
+              enum: ["bar", "line", "pie", "counter"],
+              description:
+                "bar: compare categories. line: trend over ordered points. pie: share of a whole. counter: one headline number that counts up.",
+            },
+            format: {
+              type: "string",
+              enum: ["image", "video"],
+              description:
+                'Output format. Default "image" (static). Use "video" for an animated chart.',
+            },
+            title: {
+              type: "string",
+              description: "Chart title. For a counter, this is the label.",
+            },
+            data: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  label: { type: "string" },
+                  value: { type: "number" },
+                },
+                required: ["label", "value"],
+              },
+              description:
+                "Data points for bar, line, and pie charts. Omit for counter.",
+            },
+            value: {
+              type: "number",
+              description: "The single number for a counter chart.",
+            },
+            subtitle: {
+              type: "string",
+              description: "Small heading shown above a pie chart title.",
+            },
+            caption: {
+              type: "string",
+              description: "Caption shown under a counter value.",
+            },
+            valuePrefix: {
+              type: "string",
+              description: 'Unit prefix for values, e.g. "$".',
+            },
+            valueSuffix: {
+              type: "string",
+              description: 'Unit suffix for values, e.g. "%".',
+            },
+            aspectRatio: {
+              type: "string",
+              enum: ["16:9", "1:1", "9:16"],
+              description:
+                "Defaults to 16:9 for bar/line and 1:1 for pie/counter.",
+            },
+            accentColor: {
+              type: "string",
+              description: "Optional hex accent color.",
+            },
+            backgroundColor: {
+              type: "string",
+              description: "Optional hex background color.",
+            },
+          },
+          required: ["chartType", "title"],
+        },
+      },
+      {
         name: "get_library",
         description: "Get a list of the user's generated creations",
         inputSchema: {
@@ -641,6 +732,9 @@ export class AmbienceAITools {
 
       case "generate_audio":
         return await this.generateAudio(args);
+
+      case "generate_chart":
+        return await this.generateChart(args);
 
       case "transcribe_audio":
         return await this.transcribeAudio(args);
@@ -933,6 +1027,45 @@ Status: ${result.data?.status}
 Expected completion: ${timeInfo.displayTime}
 
 The speech is being generated. You can check its status using the get_creation_status tool ${timeInfo.pollingSuggestion}.`,
+        },
+      ],
+    };
+  }
+
+  private async generateChart(args: any) {
+    const request = GenerateChartRequestSchema.parse(args);
+    const result = await this.apiClient.generateChart(request);
+
+    if (!result.success) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `Error generating chart: ${result.error}`,
+          },
+        ],
+      };
+    }
+
+    const timeInfo = getCompletionTimeInfo(
+      result.data,
+      await this.ensureModels(),
+      await this.apiClient.getGenerators(),
+    );
+
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: `Chart generation started successfully!
+
+Creation ID: ${result.data?.id}
+Title: ${request.title}
+Type: ${request.chartType} (${request.format ?? "image"})
+Status: ${result.data?.status}
+Expected completion: ${timeInfo.displayTime}
+
+The chart is being generated. You can check its status using the get_creation_status tool ${timeInfo.pollingSuggestion}.`,
         },
       ],
     };
