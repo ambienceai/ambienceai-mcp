@@ -122,20 +122,32 @@ export const GenerateAudioRequestSchema = z.object({
 export type GenerateAudioRequest = z.infer<typeof GenerateAudioRequestSchema>;
 
 // Chart generation.
-export const GenerateChartRequestSchema = z.object({
-  chartType: z.enum(["bar", "line", "pie", "counter"]),
-  format: z.enum(["image", "video"]).optional(),
-  title: z.string().min(1),
-  data: z.array(z.object({ label: z.string(), value: z.number() })).optional(),
-  value: z.number().optional(),
-  subtitle: z.string().optional(),
-  caption: z.string().optional(),
-  valuePrefix: z.string().optional(),
-  valueSuffix: z.string().optional(),
-  aspectRatio: z.enum(["16:9", "1:1", "9:16"]).optional(),
-  accentColor: z.string().optional(),
-  backgroundColor: z.string().optional(),
-});
+export const GenerateChartRequestSchema = z
+  .object({
+    chartType: z.enum(["bar", "line", "pie", "counter"]),
+    format: z.enum(["image", "video"]).optional(),
+    title: z.string().min(1),
+    data: z
+      .array(z.object({ label: z.string(), value: z.number() }))
+      .optional(),
+    value: z.number().optional(),
+    subtitle: z.string().optional(),
+    caption: z.string().optional(),
+    valuePrefix: z.string().optional(),
+    valueSuffix: z.string().optional(),
+    aspectRatio: z.enum(["16:9", "1:1", "9:16"]).optional(),
+    accentColor: z.string().optional(),
+    backgroundColor: z.string().optional(),
+  })
+  .superRefine((input, ctx) => {
+    if (input.chartType === "counter" && input.value === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["value"],
+        message: "value is required for a counter chart",
+      });
+    }
+  });
 
 export type GenerateChartRequest = z.infer<typeof GenerateChartRequestSchema>;
 

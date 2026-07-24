@@ -54,6 +54,12 @@ describe("GenerateChartRequestSchema", () => {
     expect(result.format).toBe("video");
     expect(result.value).toBe(128400);
   });
+
+  it("rejects a counter without a value", () => {
+    expect(() =>
+      GenerateChartRequestSchema.parse({ chartType: "counter", title: "ARR" }),
+    ).toThrow();
+  });
 });
 
 describe("CreditsResponseSchema", () => {
