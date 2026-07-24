@@ -14,6 +14,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   from the `/api/models` `generators` field, so no release is needed when they
   change.
 
+## [1.1.1] - 2026-07-19
+
+### Added
+
+- Server-driven model info: tool descriptions, credit costs, and default models
+  are read live from `/api/models`, so backend changes no longer require a
+  server release.
+
+### Changed
+
+- Authentication and access errors now explain how to resolve them (create a
+  token, or sign up for a paid plan) and name the plans explicitly.
+
+### Fixed
+
+- Silent startup failure when launched via `npx` or an installed binary.
+
 ## [1.0.0] - 2026-07-04
 
 First public release.

@@ -42,6 +42,7 @@ CI runs type checking and the test suite with coverage on every pull request. Be
 
 Releases publish to npm through [trusted publishing](https://docs.npmjs.com/trusted-publishers/) with staged approval — no npm tokens are stored anywhere:
 
-1. Bump the version: `npm version <patch|minor|major>`, then push the commit and tag.
-2. Create a GitHub Release for the tag. CI stages the publish to npm.
-3. Approve the staged version on npmjs.com (requires 2FA) to make it live.
+1. Update `CHANGELOG.md`: rename the `[Unreleased]` heading to the new version with today's date, and start a fresh empty `[Unreleased]` section above it.
+2. Bump the version: `npm version <patch|minor|major>`, then push the commit and tag.
+3. Create a GitHub Release for the tag. CI stages the publish to npm.
+4. Approve the staged version on npmjs.com (requires 2FA) to make it live.
