@@ -355,6 +355,12 @@ export class AmbienceAITools {
               description:
                 "URL or local file path of a reference image for style transfer or guidance. Supports URLs (https://...) and local paths (/path/to/image.jpg, ~/image.png). (optional)",
             },
+            referenceImageUrls: {
+              type: "array",
+              items: { type: "string" },
+              description:
+                "Additional reference images (URLs or local file paths) the generation should feature, beyond imageUrl and guideImageUrl. Up to 16 images total; each model enforces its own limit. (optional)",
+            },
           },
           required: ["prompt"],
         },
@@ -790,6 +796,11 @@ ${credits.credits < 10 ? "⚠️ Low credit balance! Visit ambienceai.com to add
     }
     if (request.guideImageUrl) {
       request.guideImageUrl = await this.resolveFileUrl(request.guideImageUrl);
+    }
+    if (request.referenceImageUrls?.length) {
+      request.referenceImageUrls = await Promise.all(
+        request.referenceImageUrls.map((url) => this.resolveFileUrl(url)),
+      );
     }
 
     const result = await this.apiClient.generateImage(request);

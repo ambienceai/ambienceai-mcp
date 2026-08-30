@@ -50,13 +50,14 @@ export const GenerateImageRequestSchema = z.object({
   seed: z.number().optional(),
   imageUrl: z.string().optional(),
   guideImageUrl: z.string().optional(),
+  referenceImageUrls: z.array(z.string()).max(16).optional(),
 });
 
 export type GenerateImageRequest = z.infer<typeof GenerateImageRequestSchema>;
 
 export const GenerateImageMultiRequestSchema = z.object({
   prompt: z.string().min(1),
-  imageUrls: z.array(z.string()).min(1).max(5),
+  imageUrls: z.array(z.string()).min(1).max(16),
   aspectRatio: z.enum(["16:9", "9:16", "1:1", "4:3", "3:4"]).default("16:9"),
   // No client-side default: the server resolves omitted models.
   model: z.string().optional(),

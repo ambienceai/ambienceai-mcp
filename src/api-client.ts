@@ -119,6 +119,8 @@ export class AmbienceAPIClient {
       if (request.imageUrl) requestBody.imageUrl = request.imageUrl;
       if (request.guideImageUrl)
         requestBody.guideImageUrl = request.guideImageUrl;
+      if (request.referenceImageUrls?.length)
+        requestBody.referenceImageUrls = request.referenceImageUrls;
 
       const response = await this.client.post(
         "/api/generate/image",
@@ -140,7 +142,6 @@ export class AmbienceAPIClient {
     try {
       const requestBody: any = {
         prompt: request.prompt,
-        imageUrls: request.imageUrls,
         aspectRatio: request.aspectRatio,
       };
 
@@ -150,11 +151,14 @@ export class AmbienceAPIClient {
       if (request.seed !== undefined) requestBody.seed = request.seed;
       if (request.outputFormat) requestBody.outputFormat = request.outputFormat;
 
-      // For now, use the first image as imageUrl and second as guideImageUrl
-      // This is a simplified approach until the API fully supports multiple images
+      // Every image reaches the API: first two ride the pair fields, the
+      // rest ride referenceImageUrls.
       requestBody.imageUrl = request.imageUrls[0];
       if (request.imageUrls.length > 1) {
         requestBody.guideImageUrl = request.imageUrls[1];
+      }
+      if (request.imageUrls.length > 2) {
+        requestBody.referenceImageUrls = request.imageUrls.slice(2);
       }
 
       const response = await this.client.post(
