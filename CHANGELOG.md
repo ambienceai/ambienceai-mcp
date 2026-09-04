@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-09-04
+
+### Added
+
+- `referenceImageUrls` on `generate_image`: condition a brand-new image on up
+  to 16 reference images. Per-model limits are enforced server-side and come
+  back as clear, correctable errors.
+
+### Fixed
+
+- `generate_image_multi` sends every provided image instead of only the first
+  two; the input cap rises from 5 to 16 (the server enforces each model's
+  actual limit).
+- A guide image without a base image is now honored instead of silently
+  ignored.
+
 ## [1.2.0] - 2026-07-24
 
 ### Added
