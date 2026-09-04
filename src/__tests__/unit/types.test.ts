@@ -267,18 +267,19 @@ describe("GenerateImageMultiRequestSchema", () => {
     ).toThrow();
   });
 
-  it("rejects more than 5 images", () => {
+  it("accepts up to 16 images and rejects 17", () => {
+    const urls = (n: number) =>
+      Array.from({ length: n }, (_, i) => `https://example.com/${i}.jpg`);
+    expect(
+      GenerateImageMultiRequestSchema.parse({
+        prompt: "test",
+        imageUrls: urls(16),
+      }).imageUrls,
+    ).toHaveLength(16);
     expect(() =>
       GenerateImageMultiRequestSchema.parse({
         prompt: "test",
-        imageUrls: [
-          "https://example.com/1.jpg",
-          "https://example.com/2.jpg",
-          "https://example.com/3.jpg",
-          "https://example.com/4.jpg",
-          "https://example.com/5.jpg",
-          "https://example.com/6.jpg",
-        ],
+        imageUrls: urls(17),
       }),
     ).toThrow();
   });

@@ -190,6 +190,32 @@ describe("AmbienceAPIClient", () => {
     });
   });
 
+  describe("generateImage referenceImageUrls", () => {
+    it("passes referenceImageUrls through when present", async () => {
+      mockPost.mockResolvedValue({ data: { id: "creation-123" } });
+      const client = new AmbienceAPIClient("test-token");
+
+      await client.generateImage({
+        prompt: "scene with refs",
+        aspectRatio: "16:9",
+        referenceImageUrls: ["https://example.com/ref.jpg"],
+      });
+
+      const body = mockPost.mock.calls[0]?.[1] as any;
+      expect(body.referenceImageUrls).toEqual(["https://example.com/ref.jpg"]);
+    });
+
+    it("omits the field when absent", async () => {
+      mockPost.mockResolvedValue({ data: { id: "creation-123" } });
+      const client = new AmbienceAPIClient("test-token");
+
+      await client.generateImage({ prompt: "plain", aspectRatio: "16:9" });
+
+      const body = mockPost.mock.calls[0]?.[1] as any;
+      expect(body.referenceImageUrls).toBeUndefined();
+    });
+  });
+
   describe("generateImageMulti", () => {
     it("maps first image to imageUrl", async () => {
       mockPost.mockResolvedValue({ data: { id: "creation-123" } });
@@ -208,6 +234,46 @@ describe("AmbienceAPIClient", () => {
       );
       const body = mockPost.mock.calls[0]?.[1] as any;
       expect(body.imageUrl).toBe("https://example.com/1.jpg");
+    });
+
+    it("sends every image past the pair as referenceImageUrls", async () => {
+      mockPost.mockResolvedValue({ data: { id: "creation-123" } });
+      const client = new AmbienceAPIClient("test-token");
+
+      await client.generateImageMulti({
+        prompt: "combine images",
+        imageUrls: [
+          "https://example.com/1.jpg",
+          "https://example.com/2.jpg",
+          "https://example.com/3.jpg",
+          "https://example.com/4.jpg",
+        ],
+        aspectRatio: "16:9",
+        model: "flux",
+      });
+
+      const body = mockPost.mock.calls[0]?.[1] as any;
+      expect(body.imageUrl).toBe("https://example.com/1.jpg");
+      expect(body.guideImageUrl).toBe("https://example.com/2.jpg");
+      expect(body.referenceImageUrls).toEqual([
+        "https://example.com/3.jpg",
+        "https://example.com/4.jpg",
+      ]);
+    });
+
+    it("omits referenceImageUrls at two images or fewer", async () => {
+      mockPost.mockResolvedValue({ data: { id: "creation-123" } });
+      const client = new AmbienceAPIClient("test-token");
+
+      await client.generateImageMulti({
+        prompt: "combine images",
+        imageUrls: ["https://example.com/1.jpg", "https://example.com/2.jpg"],
+        aspectRatio: "16:9",
+        model: "flux",
+      });
+
+      const body = mockPost.mock.calls[0]?.[1] as any;
+      expect(body.referenceImageUrls).toBeUndefined();
     });
 
     it("maps second image to guideImageUrl", async () => {
