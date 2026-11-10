@@ -14,6 +14,29 @@ export const CreditsResponseSchema = z.object({
 
 export type CreditsResponse = z.infer<typeof CreditsResponseSchema>;
 
+export const BrandKitSchema = z
+  .object({
+    id: z.string(),
+    guidance: z.string(),
+    name: z.string().optional(),
+    logoUrl: z.string().nullable().optional(),
+    colors: z
+      .array(z.object({ hex: z.string(), role: z.string() }).passthrough())
+      .optional(),
+    about: z.string().nullable().optional(),
+    voice: z.string().nullable().optional(),
+  })
+  .passthrough();
+
+export type BrandKit = z.infer<typeof BrandKitSchema>;
+
+export const BrandKitsResponseSchema = z.object({
+  status: z.enum(["ok", "plan_required"]),
+  kits: z.array(BrandKitSchema).default([]),
+});
+
+export type BrandKitsResponse = z.input<typeof BrandKitsResponseSchema>;
+
 // Creation types
 export const CreationSchema = z.object({
   id: z.string(),
@@ -35,6 +58,7 @@ export const CreationSchema = z.object({
   metadata: z.record(z.any()).optional(),
   generationType: z.string().optional(),
   model: z.string().optional(),
+  brandKit: z.object({ id: z.string(), name: z.string() }).optional(),
 });
 
 export type Creation = z.infer<typeof CreationSchema>;
@@ -51,6 +75,7 @@ export const GenerateImageRequestSchema = z.object({
   imageUrl: z.string().optional(),
   guideImageUrl: z.string().optional(),
   referenceImageUrls: z.array(z.string()).max(16).optional(),
+  brandKitId: z.string().optional(),
 });
 
 export type GenerateImageRequest = z.infer<typeof GenerateImageRequestSchema>;
@@ -63,6 +88,7 @@ export const GenerateImageMultiRequestSchema = z.object({
   model: z.string().optional(),
   outputFormat: z.enum(["jpeg", "png"]).optional(),
   seed: z.number().optional(),
+  brandKitId: z.string().optional(),
 });
 
 export type GenerateImageMultiRequest = z.infer<
@@ -78,6 +104,7 @@ export const GenerateVideoRequestSchema = z.object({
   imageUrl: z.string().optional(),
   negativePrompt: z.string().optional(),
   preprocessImagePrompt: z.string().optional(),
+  brandKitId: z.string().optional(),
 });
 
 export type GenerateVideoRequest = z.infer<typeof GenerateVideoRequestSchema>;
@@ -87,6 +114,7 @@ export const GenerateMusicRequestSchema = z.object({
   genre: z.string().optional(),
   mood: z.string().optional(),
   lyrics: z.string().optional(),
+  brandKitId: z.string().optional(),
 });
 
 export type GenerateMusicRequest = z.infer<typeof GenerateMusicRequestSchema>;
@@ -108,6 +136,7 @@ export const GenerateSpeechRequestSchema = z.object({
     ])
     .default("american-english"),
   speed: z.number().min(0.25).max(4.0).optional(),
+  brandKitId: z.string().optional(),
 });
 
 export type GenerateSpeechRequest = z.infer<typeof GenerateSpeechRequestSchema>;
@@ -118,6 +147,7 @@ export const GenerateAudioRequestSchema = z.object({
   type: z.enum(["speech", "music"]),
   voice: z.string().optional(),
   language: z.string().optional(),
+  brandKitId: z.string().optional(),
 });
 
 export type GenerateAudioRequest = z.infer<typeof GenerateAudioRequestSchema>;
@@ -139,6 +169,7 @@ export const GenerateChartRequestSchema = z
     aspectRatio: z.enum(["16:9", "1:1", "9:16"]).optional(),
     accentColor: z.string().optional(),
     backgroundColor: z.string().optional(),
+    brandKitId: z.string().optional(),
   })
   .superRefine((input, ctx) => {
     if (input.chartType === "counter" && input.value === undefined) {
@@ -156,12 +187,14 @@ export const UpscaleImageRequestSchema = z.object({
   imageUrl: z.string(),
   upscaleFactor: z.number().min(1).max(4).default(2),
   originalPrompt: z.string().optional(),
+  brandKitId: z.string().optional(),
 });
 
 export type UpscaleImageRequest = z.infer<typeof UpscaleImageRequestSchema>;
 
 export const TranscribeAudioRequestSchema = z.object({
   audioUrl: z.string().url(),
+  brandKitId: z.string().optional(),
 });
 
 export type TranscribeAudioRequest = z.infer<

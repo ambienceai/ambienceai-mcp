@@ -604,6 +604,47 @@ describe("AmbienceAPIClient", () => {
     });
   });
 
+  describe("getBrandKits", () => {
+    it("fetches the user's brand kits from /api/brand-kits", async () => {
+      const body = {
+        status: "ok",
+        kits: [
+          {
+            id: "kit-1",
+            name: "Acme",
+            logoUrl: "https://cdn.example.com/logo.png",
+            colors: [{ hex: "#112233", role: "primary" }],
+            about: "We make anvils.",
+            voice: "Dry and confident.",
+            guidance: "Use Acme's palette.",
+          },
+        ],
+      };
+      mockGet.mockResolvedValue({ data: body });
+      const client = new AmbienceAPIClient("test-token");
+
+      const result = await client.getBrandKits();
+
+      expect(mockGet).toHaveBeenCalledWith("/api/brand-kits");
+      expect(result).toEqual({ success: true, data: body });
+    });
+
+    it("returns the error message on failure", async () => {
+      jest.spyOn(console, "error").mockImplementation(() => {});
+      mockGet.mockRejectedValue({
+        isAxiosError: true,
+        response: { status: 500, data: { error: "internal_error" } },
+        message: "Request failed",
+      });
+      const client = new AmbienceAPIClient("test-token");
+
+      const result = await client.getBrandKits();
+
+      expect(result).toEqual({ success: false, error: "internal_error" });
+      (console.error as any).mockRestore();
+    });
+  });
+
   describe("getCreationStatus", () => {
     it("fetches creation by ID", async () => {
       mockGet.mockResolvedValue({

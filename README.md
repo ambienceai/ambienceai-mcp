@@ -67,10 +67,15 @@ For a full walkthrough with screenshots, see the [setup guide](https://www.ambie
 | `transcribe_audio`     | Convert speech to text, subtitles, or captions                                              |
 | `upscale_image`        | Increase image resolution up to 4x while preserving quality                                 |
 | `get_credits`          | Check your current credit balance                                                           |
+| `get_brand_kit`        | Read your brand kits and the instructions for applying one                                  |
 | `get_library`          | Browse your generated creations                                                             |
 | `get_creation_status`  | Check the status of a specific creation                                                     |
 
 Available models, credit costs, and default models are fetched live from the Ambience AI API, so tool descriptions stay current without a server update. Omitting the model parameter uses the server's current recommended default.
+
+### Brand kits
+
+Brand kits you build in Ambience AI (Settings, Brand) are available to Claude on the Team and Business plans. Ask Claude to make something for your brand: it reads the kit with `get_brand_kit`, writes your palette and voice into its prompts, passes your logo as a reference image when it belongs in the picture, and tags each creation with the kit's id through the optional `brandKitId` input. Nothing is branded unless Claude passes a kit, and the server never rewrites your prompts. Kits are read-only from the MCP server; edit them in Ambience AI.
 
 ## Configuration
 
