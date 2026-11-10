@@ -14,24 +14,28 @@ export const CreditsResponseSchema = z.object({
 
 export type CreditsResponse = z.infer<typeof CreditsResponseSchema>;
 
-export const BrandKitSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  logoUrl: z.string().nullable(),
-  colors: z.array(z.object({ hex: z.string(), role: z.string() })),
-  about: z.string().nullable(),
-  voice: z.string().nullable(),
-  guidance: z.string(),
-});
+export const BrandKitSchema = z
+  .object({
+    id: z.string(),
+    guidance: z.string(),
+    name: z.string().optional(),
+    logoUrl: z.string().nullable().optional(),
+    colors: z
+      .array(z.object({ hex: z.string(), role: z.string() }).passthrough())
+      .optional(),
+    about: z.string().nullable().optional(),
+    voice: z.string().nullable().optional(),
+  })
+  .passthrough();
 
 export type BrandKit = z.infer<typeof BrandKitSchema>;
 
 export const BrandKitsResponseSchema = z.object({
   status: z.enum(["ok", "plan_required"]),
-  kits: z.array(BrandKitSchema),
+  kits: z.array(BrandKitSchema).default([]),
 });
 
-export type BrandKitsResponse = z.infer<typeof BrandKitsResponseSchema>;
+export type BrandKitsResponse = z.input<typeof BrandKitsResponseSchema>;
 
 // Creation types
 export const CreationSchema = z.object({

@@ -94,6 +94,41 @@ describe("get_brand_kit", () => {
     );
   });
 
+  it("states the plan limit when plan_required comes without kits", async () => {
+    mockGet.mockResolvedValue({ data: { status: "plan_required" } });
+    const tools = new AmbienceAITools("token");
+
+    const result = await tools.executeTool("get_brand_kit", {});
+
+    expect(textOf(result)).toBe(
+      "Brand kits are part of the Team and Business plans. This account's plan doesn't include them.",
+    );
+  });
+
+  it("reads a kit whose descriptive fields are missing", async () => {
+    mockGet.mockResolvedValue({
+      data: { status: "ok", kits: [{ id: "kit-min", guidance: "Use blue." }] },
+    });
+    const tools = new AmbienceAITools("token");
+
+    const result = await tools.executeTool("get_brand_kit", {});
+
+    expect(textOf(result)).toBe("Kit ID: kit-min\nUse blue.");
+  });
+
+  it("reports a malformed response as a short error", async () => {
+    mockGet.mockResolvedValue({
+      data: { status: "ok", kits: [{ name: "No id or guidance" }] },
+    });
+    const tools = new AmbienceAITools("token");
+
+    const result = await tools.executeTool("get_brand_kit", {});
+
+    expect(textOf(result)).toBe(
+      "Error getting brand kits: the server sent an unexpected response.",
+    );
+  });
+
   it("surfaces a backend error", async () => {
     jest.spyOn(console, "error").mockImplementation(() => {});
     mockGet.mockRejectedValue({
@@ -309,7 +344,10 @@ describe("brandKitId", () => {
       isAxiosError: true,
       response: {
         status: 400,
-        data: { error: "invalid_brand_kit", message: "Brand kit not found" },
+        data: {
+          error: "invalid_request",
+          error_description: "That brand kit isn't available.",
+        },
       },
       message: "Request failed with status code 400",
     });
@@ -320,7 +358,9 @@ describe("brandKitId", () => {
       brandKitId: "kit-missing",
     });
 
-    expect(textOf(result)).toBe("Error generating image: Brand kit not found");
+    expect(textOf(result)).toBe(
+      "Error generating image: That brand kit isn't available.",
+    );
     (console.error as any).mockRestore();
   });
 });

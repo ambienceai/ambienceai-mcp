@@ -835,7 +835,19 @@ ${credits.credits < 10 ? "⚠️ Low credit balance! Visit ambienceai.com to add
       };
     }
 
-    const { status, kits } = BrandKitsResponseSchema.parse(result.data);
+    const parsed = BrandKitsResponseSchema.safeParse(result.data);
+    if (!parsed.success) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: "Error getting brand kits: the server sent an unexpected response.",
+          },
+        ],
+      };
+    }
+
+    const { status, kits } = parsed.data;
     if (status === "plan_required") {
       return {
         content: [

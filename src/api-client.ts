@@ -413,10 +413,16 @@ export class AmbienceAPIClient {
     }
   }
 
+  /**
+   * The backend URL this client talks to (AMBIENCE_API_URL or production)
+   */
   get apiBaseUrl(): string {
     return this.baseURL;
   }
 
+  /**
+   * Get the user's brand kits (read-only)
+   */
   async getBrandKits(): Promise<ApiResponse<BrandKitsResponse>> {
     try {
       const response = await this.client.get("/api/brand-kits");
