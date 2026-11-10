@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from "axios";
 import type {
   ApiResponse,
+  BrandKitsResponse,
   CreditsResponse,
   Creation,
   GenerateImageRequest,
@@ -122,6 +123,8 @@ export class AmbienceAPIClient {
       if (request.referenceImageUrls?.length)
         requestBody.referenceImageUrls = request.referenceImageUrls;
 
+      if (request.brandKitId) requestBody.brandKitId = request.brandKitId;
+
       const response = await this.client.post(
         "/api/generate/image",
         requestBody,
@@ -161,6 +164,8 @@ export class AmbienceAPIClient {
         requestBody.referenceImageUrls = request.imageUrls.slice(2);
       }
 
+      if (request.brandKitId) requestBody.brandKitId = request.brandKitId;
+
       const response = await this.client.post(
         "/api/generate/image",
         requestBody,
@@ -194,6 +199,8 @@ export class AmbienceAPIClient {
       if (request.preprocessImagePrompt)
         requestBody.preprocessImagePrompt = request.preprocessImagePrompt;
 
+      if (request.brandKitId) requestBody.brandKitId = request.brandKitId;
+
       const response = await this.client.post(
         "/api/generate/video",
         requestBody,
@@ -222,6 +229,8 @@ export class AmbienceAPIClient {
       if (request.mood) requestBody.mood = request.mood;
       if (request.lyrics) requestBody.lyrics = request.lyrics;
 
+      if (request.brandKitId) requestBody.brandKitId = request.brandKitId;
+
       const response = await this.client.post(
         "/api/generate/audio",
         requestBody,
@@ -249,6 +258,8 @@ export class AmbienceAPIClient {
 
       // Add optional parameters only if they exist
       if (request.speed) requestBody.speed = request.speed;
+
+      if (request.brandKitId) requestBody.brandKitId = request.brandKitId;
 
       const response = await this.client.post(
         "/api/generate/audio",
@@ -283,6 +294,8 @@ export class AmbienceAPIClient {
       if (request.backgroundColor)
         requestBody.backgroundColor = request.backgroundColor;
 
+      if (request.brandKitId) requestBody.brandKitId = request.brandKitId;
+
       const response = await this.client.post(
         "/api/generate/chart",
         requestBody,
@@ -309,6 +322,8 @@ export class AmbienceAPIClient {
       if (request.originalPrompt)
         requestBody.originalPrompt = request.originalPrompt;
 
+      if (request.brandKitId) requestBody.brandKitId = request.brandKitId;
+
       const response = await this.client.post(
         "/api/generate/upscale",
         requestBody,
@@ -327,9 +342,13 @@ export class AmbienceAPIClient {
     request: TranscribeAudioRequest,
   ): Promise<ApiResponse<Creation>> {
     try {
-      const response = await this.client.post("/api/generate/transcription", {
-        audioUrl: request.audioUrl,
-      });
+      const requestBody: any = { audioUrl: request.audioUrl };
+      if (request.brandKitId) requestBody.brandKitId = request.brandKitId;
+
+      const response = await this.client.post(
+        "/api/generate/transcription",
+        requestBody,
+      );
 
       return { success: true, data: response.data as Creation };
     } catch (error) {
@@ -349,6 +368,7 @@ export class AmbienceAPIClient {
         prompt: request.prompt,
         ...(request.voice && { voice: request.voice }),
         ...(request.language && { language: request.language }),
+        ...(request.brandKitId && { brandKitId: request.brandKitId }),
       };
 
       const response = await this.client.post(
@@ -388,6 +408,19 @@ export class AmbienceAPIClient {
       // Extract creations array from API response format { creations: [], total: number, ... }
       const apiResponse = response.data as { creations: Creation[] };
       return { success: true, data: apiResponse.creations };
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  get apiBaseUrl(): string {
+    return this.baseURL;
+  }
+
+  async getBrandKits(): Promise<ApiResponse<BrandKitsResponse>> {
+    try {
+      const response = await this.client.get("/api/brand-kits");
+      return { success: true, data: response.data as BrandKitsResponse };
     } catch (error) {
       return this.handleError(error);
     }

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `get_brand_kit` tool: read the user's Ambience AI brand kits (name, logo,
+  colors, about, and voice) with the server's instructions for applying each
+  one. Kits are read-only here.
+- `brandKitId` on every generation tool (`generate_*`, `upscale_image`, and
+  `transcribe_audio`): marks a creation as made for a brand kit, and the
+  success message names the brand. It never changes the prompt; the calling
+  agent writes the brand into its own prompts. Omitting it sends the same
+  request as before.
+
 ## [1.3.0] - 2026-09-04
 
 ### Added

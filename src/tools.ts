@@ -18,6 +18,8 @@ import {
   TranscribeAudioRequestSchema,
   LibraryRequestSchema,
   CreditsResponseSchema,
+  BrandKitsResponseSchema,
+  type Creation,
 } from "./types.js";
 import { getCompletionTimeInfo } from "./constants.js";
 
@@ -198,6 +200,16 @@ export function buildToolCostDescription(
   return ` (${Math.min(...unique)}-${Math.max(...unique)} credits)`;
 }
 
+function brandLine(creation: Creation | undefined): string {
+  return creation?.brandKit ? `\nBrand: ${creation.brandKit.name}` : "";
+}
+
+const BRAND_KIT_ID_INPUT = {
+  type: "string",
+  description:
+    "The id of a brand kit from get_brand_kit. Marks this creation as made for that brand. It does not change the prompt: write the brand into the prompt yourself. (optional)",
+};
+
 export class AmbienceAITools {
   private apiClient: AmbienceAPIClient;
 
@@ -313,6 +325,16 @@ export class AmbienceAITools {
         },
       },
       {
+        name: "get_brand_kit",
+        description:
+          "Get the user's brand kits: name, logo, colors, about, and voice, plus instructions for applying a kit. Call this before generating anything for the user's brand. Then pass the kit's id as brandKitId on each generate_* call, write the brand into your prompts as the instructions say, and pass logoUrl in referenceImageUrls when the logo belongs in the image.",
+        inputSchema: {
+          type: "object",
+          properties: {},
+          required: [],
+        },
+      },
+      {
         name: "generate_image",
         description:
           "Generate or edit an image from a text prompt using AI. Supports text-to-image, image-to-image editing, and style transfer. Prompts are automatically enhanced server-side for optimal quality.",
@@ -361,6 +383,7 @@ export class AmbienceAITools {
               description:
                 "Additional reference images (URLs or local file paths) the generation should feature, beyond imageUrl and guideImageUrl. Up to 16 images total; each model enforces its own limit. (optional)",
             },
+            brandKitId: BRAND_KIT_ID_INPUT,
           },
           required: ["prompt"],
         },
@@ -406,6 +429,7 @@ export class AmbienceAITools {
               type: "number",
               description: "Random seed for reproducible results (optional)",
             },
+            brandKitId: BRAND_KIT_ID_INPUT,
           },
           required: ["prompt", "imageUrls"],
         },
@@ -455,6 +479,7 @@ export class AmbienceAITools {
               description:
                 "Description of the first frame for text-to-video. Not used for image-to-video. Optional.",
             },
+            brandKitId: BRAND_KIT_ID_INPUT,
           },
           required: ["prompt"],
         },
@@ -484,6 +509,7 @@ export class AmbienceAITools {
               type: "string",
               description: "Lyrics to include in the song (optional)",
             },
+            brandKitId: BRAND_KIT_ID_INPUT,
           },
           required: ["prompt"],
         },
@@ -525,6 +551,7 @@ export class AmbienceAITools {
               maximum: 4.0,
               description: "Speech speed multiplier (0.25x to 4.0x) (optional)",
             },
+            brandKitId: BRAND_KIT_ID_INPUT,
           },
           required: ["text"],
         },
@@ -555,6 +582,7 @@ export class AmbienceAITools {
               description: "Language for speech generation (optional)",
               default: "american-english",
             },
+            brandKitId: BRAND_KIT_ID_INPUT,
           },
           required: ["prompt", "type"],
         },
@@ -569,6 +597,7 @@ export class AmbienceAITools {
               type: "string",
               description: "URL of the audio file to transcribe",
             },
+            brandKitId: BRAND_KIT_ID_INPUT,
           },
           required: ["audioUrl"],
         },
@@ -596,6 +625,7 @@ export class AmbienceAITools {
               description:
                 "The original prompt used to generate the image (optional, improves upscale quality)",
             },
+            brandKitId: BRAND_KIT_ID_INPUT,
           },
           required: ["imageUrl"],
         },
@@ -669,6 +699,7 @@ export class AmbienceAITools {
               type: "string",
               description: "Optional hex background color.",
             },
+            brandKitId: BRAND_KIT_ID_INPUT,
           },
           required: ["chartType", "title"],
         },
@@ -720,6 +751,9 @@ export class AmbienceAITools {
     switch (name) {
       case "get_credits":
         return await this.getCredits();
+
+      case "get_brand_kit":
+        return await this.getBrandKit();
 
       case "generate_image":
         return await this.generateImage(args);
@@ -787,6 +821,50 @@ ${credits.credits < 10 ? "⚠️ Low credit balance! Visit ambienceai.com to add
     };
   }
 
+  private async getBrandKit() {
+    const result = await this.apiClient.getBrandKits();
+
+    if (!result.success) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `Error getting brand kits: ${result.error}`,
+          },
+        ],
+      };
+    }
+
+    const { status, kits } = BrandKitsResponseSchema.parse(result.data);
+    if (status === "plan_required") {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: "Brand kits are part of the Team and Business plans. This account's plan doesn't include them.",
+          },
+        ],
+      };
+    }
+
+    if (kits.length === 0) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `No brand kit yet. The user can build one from their website at ${this.apiClient.apiBaseUrl}/settings/brand`,
+          },
+        ],
+      };
+    }
+
+    const text = kits
+      .map((kit) => `Kit ID: ${kit.id}\n${kit.guidance}`)
+      .join("\n\n");
+
+    return { content: [{ type: "text" as const, text }] };
+  }
+
   private async generateImage(args: any) {
     const request = GenerateImageRequestSchema.parse(args);
 
@@ -827,7 +905,7 @@ ${credits.credits < 10 ? "⚠️ Low credit balance! Visit ambienceai.com to add
           type: "text" as const,
           text: `Image generation started successfully!
 
-Creation ID: ${result.data?.id}
+Creation ID: ${result.data?.id}${brandLine(result.data)}
 Prompt: ${request.prompt}
 Status: ${result.data?.status}
 Expected completion: ${timeInfo.displayTime}
@@ -870,7 +948,7 @@ The image is being generated. You can check its status using the get_creation_st
           type: "text" as const,
           text: `Video generation started successfully!
 
-Creation ID: ${result.data?.id}
+Creation ID: ${result.data?.id}${brandLine(result.data)}
 Prompt: ${request.prompt}
 Duration: ${request.duration} seconds
 Status: ${result.data?.status}
@@ -908,7 +986,7 @@ The video is being generated. You can check its status using the get_creation_st
           type: "text" as const,
           text: `${request.type.charAt(0).toUpperCase() + request.type.slice(1)} generation started successfully!
 
-Creation ID: ${result.data?.id}
+Creation ID: ${result.data?.id}${brandLine(result.data)}
 Prompt: ${request.prompt}
 Type: ${request.type}
 Status: ${result.data?.status}
@@ -952,7 +1030,7 @@ The ${request.type} is being generated. You can check its status using the get_c
           type: "text" as const,
           text: `Multi-image generation started successfully!
 
-Creation ID: ${result.data?.id}
+Creation ID: ${result.data?.id}${brandLine(result.data)}
 Prompt: ${request.prompt}
 Input Images: ${request.imageUrls.length} images
 Status: ${result.data?.status}
@@ -990,7 +1068,7 @@ The multi-image composition is being generated. You can check its status using t
           type: "text" as const,
           text: `Music generation started successfully!
 
-Creation ID: ${result.data?.id}
+Creation ID: ${result.data?.id}${brandLine(result.data)}
 Prompt: ${request.prompt}
 ${request.genre ? `Genre: ${request.genre}` : ""}
 ${request.mood ? `Mood: ${request.mood}` : ""}
@@ -1029,7 +1107,7 @@ The music is being generated. You can check its status using the get_creation_st
           type: "text" as const,
           text: `Speech generation started successfully!
 
-Creation ID: ${result.data?.id}
+Creation ID: ${result.data?.id}${brandLine(result.data)}
 Text: ${request.text.length > 100 ? request.text.substring(0, 100) + "..." : request.text}
 Voice: ${request.voice}
 Language: ${request.language}
@@ -1070,7 +1148,7 @@ The speech is being generated. You can check its status using the get_creation_s
           type: "text" as const,
           text: `Chart generation started successfully!
 
-Creation ID: ${result.data?.id}
+Creation ID: ${result.data?.id}${brandLine(result.data)}
 Title: ${request.title}
 Type: ${request.chartType} (${request.format ?? "image"})
 Status: ${result.data?.status}
@@ -1108,7 +1186,7 @@ The chart is being generated. You can check its status using the get_creation_st
           type: "text" as const,
           text: `Transcription started successfully!
 
-Creation ID: ${result.data?.id}
+Creation ID: ${result.data?.id}${brandLine(result.data)}
 Audio URL: ${request.audioUrl}
 Status: ${result.data?.status}
 Expected completion: ${timeInfo.displayTime}
@@ -1149,7 +1227,7 @@ The transcription is being processed. You can check its status using the get_cre
           type: "text" as const,
           text: `Image upscale started successfully!
 
-Creation ID: ${result.data?.id}
+Creation ID: ${result.data?.id}${brandLine(result.data)}
 Image URL: ${request.imageUrl}
 Upscale Factor: ${request.upscaleFactor}x
 Status: ${result.data?.status}
